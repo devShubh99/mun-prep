@@ -67,19 +67,6 @@ export interface ResearchChatMessage {
   created_at: string
 }
 
-export interface SpeechEvaluation {
-  transcript: string
-  evaluation: {
-    clarity: { score: number; feedback: string }
-    argumentStrength: { score: number; feedback: string }
-    factualAccuracy: { score: number; feedback: string }
-    tone: { score: number; feedback: string }
-  }
-  overallScore: number
-  suggestedImprovements: string[]
-  rebuttalReady: string
-}
-
 export const TABLES = {
   conferences: 'conferences',
   documents: 'documents',

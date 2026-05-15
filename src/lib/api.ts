@@ -81,25 +81,4 @@ export function evaluateAnswer(params: {
   }>('/evaluate-answer', params)
 }
 
-export function evaluateSpeech(params: {
-  transcript: string
-  researchContext: string
-  cheatSheetContext: string
-}) {
-  return request<{
-    transcript: string
-    evaluation: {
-      clarity: { score: number; feedback: string }
-      argumentStrength: { score: number; feedback: string }
-      factualAccuracy: { score: number; feedback: string }
-      tone: { score: number; feedback: string }
-    }
-    overallScore: number
-    suggestedImprovements: string[]
-    rebuttalReady: string
-  }>('/evaluate-speech', params)
-}
 
-export function sttProxy(params: { audioBase64: string }) {
-  return request<{ transcript: string }>('/stt-proxy', params)
-}

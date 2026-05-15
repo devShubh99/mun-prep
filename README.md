@@ -48,7 +48,6 @@ Deploy to Netlify:
    | `VITE_SUPABASE_URL` | Supabase project URL |
    | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
    | `DEEPSEEK_API_KEY` | DeepSeek API key (for AI features) |
-   | `GOOGLE_STT_API_KEY` | Google Cloud STT key (for Speech Practice) |
 
 3. Deploy — Netlify auto-detects the build command and settings from `netlify.toml`
 
@@ -58,5 +57,4 @@ Deploy to Netlify:
 - **Cheat Sheet**: AI-generated country research with 7 tabs (Mandate, Core Demands, Red Lines, Allies & Opponents, Voting Record, Draft Clauses, Strategy & Q&A)
 - **Research**: AI-generated briefing document with follow-up chat interface
 - **Debate Simulator**: Q&A practice with 5 roles and scored feedback
-- **Speech Practice**: Record or type speeches with AI evaluation
 - **Document Workshop**: Multi-document editor with AI polish/shorten/brainstorm/insert-clause

@@ -24,7 +24,7 @@
 - **Data flow**: `supabase` client → `useConference` context (fetches on `user` change) → components.
 - **API proxy**: `vite.config.ts` proxies `/api/*` → `localhost:8888` for local Netlify Functions.
 - **Design system**: Anthropic-style cream/coral/navy palette. `tailwind.config.js` defines custom colors (`canvas`, `ink`, `primary`, `body`, `surface-card`, etc.) and component classes in `src/index.css` (`.btn-primary`, `.card`, `.input`, `.badge`).
-- **7 Netlify functions** — all use `deepseek-v4-pro` via OpenAI SDK (`shared.ts` client), respond JSON via `ok()/error()` helpers.
+- **5 Netlify functions** — all use `deepseek-v4-pro` via OpenAI SDK (`shared.ts` client), respond JSON via `ok()/error()` helpers.
 
 ## Gotchas
 
@@ -40,7 +40,7 @@
 | Path | Responsibility |
 |---|---|
 | `src/lib/supabase.ts` | Supabase client singleton (throws if VITE_ vars missing) |
-| `src/lib/api.ts` | 7 typed API wrappers (generateCheatSheet, generateResearch, researchChat, documentAi, generateQuestion, evaluateAnswer, evaluateSpeech, sttProxy) |
+| `src/lib/api.ts` | 5 typed API wrappers (generateCheatSheet, generateResearch, researchChat, documentAi, generateQuestion, evaluateAnswer) |
 | `src/hooks/useAuth.tsx` | Auth context — signIn, signUp, signOut |
 | `src/hooks/useConference.tsx` | Supabase-backed conference CRUD context |
 | `src/hooks/useAutoSave.ts` | Debounced save (2s, skips first render, async callback) |
