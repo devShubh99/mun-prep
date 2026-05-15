@@ -3,7 +3,7 @@
 ## Stack
 
 - **Vite + React 18 + TypeScript + Tailwind CSS** SPA. All data in Supabase.
-- **Netlify Functions** (`netlify/functions/`) as DeepSeek API proxy. `openai` package is in root `package.json`, NOT a separate functions `package.json`.
+- **Netlify Functions** (`netlify/functions/`) as OpenRouter API proxy. `openai` package is in root `package.json`, NOT a separate functions `package.json`.
 - **Supabase** for auth (email/password) + data (4 tables: `conferences`, `documents`, `debate_qa`, `research_chat_messages`). RLS on all tables scoped to `auth.uid()`.
 - **TipTap** (ProseMirror) for rich text, **React Router v6**, **lucide-react** for icons.
 
@@ -24,7 +24,7 @@
 - **Data flow**: `supabase` client → `useConference` context (fetches on `user` change) → components.
 - **API proxy**: `vite.config.ts` proxies `/api/*` → `localhost:8888` for local Netlify Functions.
 - **Design system**: Anthropic-style cream/coral/navy palette. `tailwind.config.js` defines custom colors (`canvas`, `ink`, `primary`, `body`, `surface-card`, etc.) and component classes in `src/index.css` (`.btn-primary`, `.card`, `.input`, `.badge`).
-- **5 Netlify functions** — all use `deepseek-v4-flash` via OpenRouter API (`shared.ts` client), respond JSON via `ok()/error()` helpers.
+- **6 Netlify functions** — all use `deepseek-v4-flash` via OpenRouter API (`shared.ts` client), respond JSON via `ok()/error()` helpers.
 
 ## Gotchas
 
@@ -40,7 +40,7 @@
 | Path | Responsibility |
 |---|---|
 | `src/lib/supabase.ts` | Supabase client singleton (throws if VITE_ vars missing) |
-| `src/lib/api.ts` | 5 typed API wrappers (generateCheatSheet, generateResearch, researchChat, documentAi, generateQuestion, evaluateAnswer) |
+| `src/lib/api.ts` | 6 typed API wrappers (generateCheatSheet, generateResearch, researchChat, documentAi, generateQuestion, evaluateAnswer) |
 | `src/hooks/useAuth.tsx` | Auth context — signIn, signUp, signOut |
 | `src/hooks/useConference.tsx` | Supabase-backed conference CRUD context |
 | `src/hooks/useAutoSave.ts` | Debounced save (2s, skips first render, async callback) |
@@ -49,6 +49,6 @@
 | `src/modules/cheat-sheet/CheatSheet.tsx` | Read-only, 7 tabs, AI-generated |
 | `src/modules/research/ResearchTab.tsx` | AI briefing + ResearchChat.tsx (bubble UI) |
 | `src/modules/documents/DocumentWorkshop.tsx` | Multi-doc manager with TipTap + AI actions |
-| `src/modules/debate/DebateSimulator.tsx` | Q&A practice with 5 roles + SpeechPractice.tsx |
-| `netlify/functions/shared.ts` | DeepSeek OpenAI client + ok/error helpers |
+| `src/modules/debate/DebateSimulator.tsx` | Q&A practice with 5 roles |
+| `netlify/functions/shared.ts` | OpenRouter OpenAI client + ok/error helpers |
 | `src/types/index.ts` | All interfaces (Conference, CheatSheetJson, Document, DebateQA, etc.) |

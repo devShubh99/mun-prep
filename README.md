@@ -1,6 +1,6 @@
 # MUN Prep Companion
 
-A personal MUN (Model United Nations) preparation web app. Helps delegates research countries, practice debate, and write documents. Built with React + TypeScript + Supabase + DeepSeek AI.
+A personal MUN (Model United Nations) preparation web app. Helps delegates research countries, practice debate, and write documents. Built with React + TypeScript + Supabase + OpenRouter AI.
 
 ## Setup
 
