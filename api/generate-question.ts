@@ -1,4 +1,4 @@
-import { client, send, sendError, readBody } from './shared'
+import { client, send, sendError, readBody } from './_shared'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export default async (req: VercelRequest, res: VercelResponse) => {
