@@ -47,7 +47,7 @@ Deploy to Netlify:
    |---|---|
    | `VITE_SUPABASE_URL` | Supabase project URL |
    | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
-   | `DEEPSEEK_API_KEY` | DeepSeek API key (for AI features) |
+   | `OPENROUTER_API_KEY` | OpenRouter API key (proxies DeepSeek-V4-Flash for AI features) |
 
 3. Deploy — Netlify auto-detects the build command and settings from `netlify.toml`
 

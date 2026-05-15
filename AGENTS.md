@@ -24,12 +24,12 @@
 - **Data flow**: `supabase` client → `useConference` context (fetches on `user` change) → components.
 - **API proxy**: `vite.config.ts` proxies `/api/*` → `localhost:8888` for local Netlify Functions.
 - **Design system**: Anthropic-style cream/coral/navy palette. `tailwind.config.js` defines custom colors (`canvas`, `ink`, `primary`, `body`, `surface-card`, etc.) and component classes in `src/index.css` (`.btn-primary`, `.card`, `.input`, `.badge`).
-- **5 Netlify functions** — all use `deepseek-v4-flash` via OpenAI SDK (`shared.ts` client), respond JSON via `ok()/error()` helpers.
+- **5 Netlify functions** — all use `deepseek-v4-flash` via OpenRouter API (`shared.ts` client), respond JSON via `ok()/error()` helpers.
 
 ## Gotchas
 
 - **`noUnusedLocals: true`, `noUnusedParameters: true`** — unused imports/vars break the build.
-- **Netlify env vars**: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in Netlify (baked at build time by Vite). `DEEPSEEK_API_KEY` is runtime for functions.
+- **Netlify env vars**: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in Netlify (baked at build time by Vite). `OPENROUTER_API_KEY` is runtime for functions.
 - **SPA routing**: `netlify.toml` has `/* → /index.html` catch-all redirect AFTER the `/api/*` rule. Order matters.
 - **`index.css` font import order**: Google Fonts `@import` sits after `@tailwind` directives — produces a PostCSS warning but works. Move it above `@tailwind` to fix.
 - **E2E tests stale**: `e2e.mjs` targets old localStorage/Gemini app. All 14 tests will fail on current code.
