@@ -1,4 +1,5 @@
-import { client, json } from './shared'
+import { client, send, sendError, readBody } from './shared'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const ACTIONS: Record<string, string> = {
   polish: 'Polish the text to make it more diplomatic and professional. Return only the polished text.',
@@ -7,10 +8,10 @@ const ACTIONS: Record<string, string> = {
   'insert-clause': 'Draft a formal working clause on this topic. Return only the clause text.',
 }
 
-export default async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+export default async (req: VercelRequest, res: VercelResponse) => {
+  if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
-    const { action, documentType, content, context } = await req.json()
+    const { action, documentType, content, context } = await readBody(req)
     const instruction = ACTIONS[action] || ACTIONS.polish
     const completion = await client.chat.completions.create({
       model: 'deepseek-v4-flash',
@@ -19,8 +20,8 @@ export default async (req: Request): Promise<Response> => {
         { role: 'user', content },
       ],
     })
-    return json({ result: completion.choices[0].message.content?.trim() })
+    return send(res, { result: completion.choices[0].message.content?.trim() })
   } catch (e: any) {
-    return json({ error: e.message }, 500)
+    return sendError(res, e.message)
   }
 }

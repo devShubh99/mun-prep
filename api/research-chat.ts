@@ -1,9 +1,10 @@
-import { client, json } from './shared'
+import { client, send, sendError, readBody } from './shared'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-export default async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+export default async (req: VercelRequest, res: VercelResponse) => {
+  if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
-    const { researchContext, question } = await req.json()
+    const { researchContext, question } = await readBody(req)
     const completion = await client.chat.completions.create({
       model: 'deepseek-v4-flash',
       messages: [
@@ -11,8 +12,8 @@ export default async (req: Request): Promise<Response> => {
         { role: 'user', content: question },
       ],
     })
-    return json({ answer: completion.choices[0].message.content })
+    return send(res, { answer: completion.choices[0].message.content })
   } catch (e: any) {
-    return json({ error: e.message }, 500)
+    return sendError(res, e.message)
   }
 }

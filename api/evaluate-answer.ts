@@ -1,4 +1,5 @@
-import { client, json } from './shared'
+import { client, send, sendError, readBody } from './shared'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const SYSTEM_PROMPT = `You are a MUN evaluator. Score the delegate's answer and return JSON:
 {
@@ -9,10 +10,10 @@ const SYSTEM_PROMPT = `You are a MUN evaluator. Score the delegate's answer and 
   "modelRebuttal": "string"
 }`
 
-export default async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+export default async (req: VercelRequest, res: VercelResponse) => {
+  if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
-    const { question, answer, country, committee, topic, role } = await req.json()
+    const { question, answer, country, committee, topic, role } = await readBody(req)
     const completion = await client.chat.completions.create({
       model: 'deepseek-v4-flash',
       messages: [
@@ -21,8 +22,8 @@ export default async (req: Request): Promise<Response> => {
       ],
       response_format: { type: 'json_object' },
     })
-    return json(JSON.parse(completion.choices[0].message.content || '{}'))
+    return send(res, JSON.parse(completion.choices[0].message.content || '{}'))
   } catch (e: any) {
-    return json({ error: e.message }, 500)
+    return sendError(res, e.message)
   }
 }

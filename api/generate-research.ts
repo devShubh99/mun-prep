@@ -1,4 +1,5 @@
-import { client, json } from './shared'
+import { client, send, sendError, readBody } from './shared'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const SYSTEM_PROMPT = (country: string, committee: string, topic: string) =>
   `You are an expert Model United Nations research agent. Your task is to conduct comprehensive research for a delegate representing ${country} in a Model United Nations conference.
@@ -46,10 +47,10 @@ Use credible sources: UN databases, government websites, BBC, Reuters,
 Council on Foreign Relations, and academic sources.
 Cite sources where possible.`
 
-export default async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+export default async (req: VercelRequest, res: VercelResponse) => {
+  if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
-    const { country, committee, topic } = await req.json()
+    const { country, committee, topic } = await readBody(req)
     const completion = await client.chat.completions.create({
       model: 'deepseek-v4-flash',
       messages: [
@@ -59,8 +60,8 @@ export default async (req: Request): Promise<Response> => {
           : `Generate a comprehensive research briefing for ${country} for ${committee}.` },
       ],
     })
-    return json({ content: completion.choices[0].message.content })
+    return send(res, { content: completion.choices[0].message.content })
   } catch (e: any) {
-    return json({ error: e.message }, 500)
+    return sendError(res, e.message)
   }
 }
