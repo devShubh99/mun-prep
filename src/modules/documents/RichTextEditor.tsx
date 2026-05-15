@@ -20,7 +20,7 @@ export default function RichTextEditor({ content, onChange }: Props) {
       }),
       Underline,
     ],
-    content,
+    content: (() => { try { return JSON.parse(content) } catch { return content } })(),
     onUpdate: ({ editor }) => {
       const json = JSON.stringify(editor.getJSON());
       contentRef.current = json;
