@@ -1,4 +1,4 @@
-import { client, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = `You are an expert MUN delegate. Generate a comprehensive cheat sheet as JSON matching this schema exactly:
@@ -20,15 +20,11 @@ export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { country, committee, topic, specialRole } = await readBody(req)
-    const completion = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Country: ${country}\nCommittee: ${committee}\nTopic: ${topic}${specialRole ? `\nSpecial Role: ${specialRole}` : ''}\n\nGenerate comprehensive cheat sheet JSON.` },
-      ],
-      response_format: { type: 'json_object' },
-    })
-    return send(res, JSON.parse(completion.choices[0].message.content || '{}'))
+    const content = await callDeepSeek([
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `Country: ${country}\nCommittee: ${committee}\nTopic: ${topic}${specialRole ? `\nSpecial Role: ${specialRole}` : ''}\n\nGenerate comprehensive cheat sheet JSON.` },
+    ], { json: true })
+    return send(res, JSON.parse(content))
   } catch (e: any) {
     return sendError(res, e.message)
   }

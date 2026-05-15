@@ -1,4 +1,4 @@
-import { client, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = (country: string, committee: string, topic: string) =>
@@ -51,16 +51,13 @@ export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { country, committee, topic } = await readBody(req)
-    const completion = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT(country, committee, topic) },
-        { role: 'user', content: topic
-          ? `Generate a comprehensive research briefing for ${country} on ${topic} for ${committee}.`
-          : `Generate a comprehensive research briefing for ${country} for ${committee}.` },
-      ],
-    })
-    return send(res, { content: completion.choices[0].message.content })
+    const content = await callDeepSeek([
+      { role: 'system', content: SYSTEM_PROMPT(country, committee, topic) },
+      { role: 'user', content: topic
+        ? `Generate a comprehensive research briefing for ${country} on ${topic} for ${committee}.`
+        : `Generate a comprehensive research briefing for ${country} for ${committee}.` },
+    ])
+    return send(res, { content })
   } catch (e: any) {
     return sendError(res, e.message)
   }

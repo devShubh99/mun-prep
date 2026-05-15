@@ -1,18 +1,15 @@
-import { client, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { country, committee, topic, role } = await readBody(req)
-    const completion = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
-      messages: [
-        { role: 'system', content: `You are a MUN committee chair. Generate a realistic debate question for a delegate representing ${country} in ${committee} on the topic "${topic}". Role: ${role}. Return only the question text, no JSON.` },
-        { role: 'user', content: 'Generate a debate question.' },
-      ],
-    })
-    return send(res, { question: completion.choices[0].message.content })
+    const content = await callDeepSeek([
+      { role: 'system', content: `You are a MUN committee chair. Generate a realistic debate question for a delegate representing ${country} in ${committee} on the topic "${topic}". Role: ${role}. Return only the question text, no JSON.` },
+      { role: 'user', content: 'Generate a debate question.' },
+    ])
+    return send(res, { question: content })
   } catch (e: any) {
     return sendError(res, e.message)
   }

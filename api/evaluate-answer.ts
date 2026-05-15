@@ -1,4 +1,4 @@
-import { client, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = `You are a MUN evaluator. Score the delegate's answer and return JSON:
@@ -14,15 +14,11 @@ export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { question, answer, country, committee, topic, role } = await readBody(req)
-    const completion = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
-      messages: [
-        { role: 'system', content: `${SYSTEM_PROMPT}\nContext: ${country}, ${committee}, ${topic}, Role: ${role}` },
-        { role: 'user', content: `Question: ${question}\nAnswer: ${answer}\n\nEvaluate this answer.` },
-      ],
-      response_format: { type: 'json_object' },
-    })
-    return send(res, JSON.parse(completion.choices[0].message.content || '{}'))
+    const content = await callDeepSeek([
+      { role: 'system', content: `${SYSTEM_PROMPT}\nContext: ${country}, ${committee}, ${topic}, Role: ${role}` },
+      { role: 'user', content: `Question: ${question}\nAnswer: ${answer}\n\nEvaluate this answer.` },
+    ], { json: true })
+    return send(res, JSON.parse(content))
   } catch (e: any) {
     return sendError(res, e.message)
   }

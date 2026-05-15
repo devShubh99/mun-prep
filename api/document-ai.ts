@@ -1,4 +1,4 @@
-import { client, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const ACTIONS: Record<string, string> = {
@@ -13,14 +13,11 @@ export default async (req: IncomingMessage, res: ServerResponse) => {
   try {
     const { action, documentType, content, context } = await readBody(req)
     const instruction = ACTIONS[action] || ACTIONS.polish
-    const completion = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
-      messages: [
-        { role: 'system', content: `${instruction}\nDocument type: ${documentType}\n${context ? `Context: ${context}` : ''}` },
-        { role: 'user', content },
-      ],
-    })
-    return send(res, { result: completion.choices[0].message.content?.trim() })
+    const result = await callDeepSeek([
+      { role: 'system', content: `${instruction}\nDocument type: ${documentType}\n${context ? `Context: ${context}` : ''}` },
+      { role: 'user', content },
+    ])
+    return send(res, { result: result.trim() })
   } catch (e: any) {
     return sendError(res, e.message)
   }
