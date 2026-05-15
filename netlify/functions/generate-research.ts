@@ -20,7 +20,7 @@ Research and compile the following:
 
 ## 3. COMMITTEE-SPECIFIC RESEARCH
 - Committee: ${committee}
-- Topic: ${topic}
+${topic ? `- Topic: ${topic}` : ''}
 - ${country}'s official position or voting history on this topic
 - Any resolutions ${country} has co-sponsored related to this topic
 - Domestic relevance of this topic to ${country}
@@ -55,7 +55,9 @@ export const handler: Handler = async (event) => {
       model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT(country, committee, topic) },
-        { role: 'user', content: `Generate a comprehensive research briefing for ${country} on ${topic} for ${committee}.` },
+        { role: 'user', content: topic
+          ? `Generate a comprehensive research briefing for ${country} on ${topic} for ${committee}.`
+          : `Generate a comprehensive research briefing for ${country} for ${committee}.` },
       ],
     })
     return ok({ content: response.choices[0].message.content })
