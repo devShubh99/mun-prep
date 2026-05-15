@@ -1,5 +1,5 @@
 import { client, send, sendError, readBody } from './_shared'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = `You are a MUN evaluator. Score the delegate's answer and return JSON:
 {
@@ -10,7 +10,7 @@ const SYSTEM_PROMPT = `You are a MUN evaluator. Score the delegate's answer and 
   "modelRebuttal": "string"
 }`
 
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { question, answer, country, committee, topic, role } = await readBody(req)

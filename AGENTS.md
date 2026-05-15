@@ -50,5 +50,5 @@
 | `src/modules/research/ResearchTab.tsx` | AI briefing + ResearchChat.tsx (bubble UI) |
 | `src/modules/documents/DocumentWorkshop.tsx` | Multi-doc manager with TipTap + AI actions |
 | `src/modules/debate/DebateSimulator.tsx` | Q&A practice with 5 roles |
-| `api/shared.ts` | OpenRouter OpenAI client + json() helper |
+| `api/_shared.ts` | OpenRouter OpenAI client + send/sendError/readBody helpers |
 | `src/types/index.ts` | All interfaces (Conference, CheatSheetJson, Document, DebateQA, etc.) |

@@ -1,7 +1,7 @@
 import { client, send, sendError, readBody } from './_shared'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { IncomingMessage, ServerResponse } from 'http'
 
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { researchContext, question } = await readBody(req)

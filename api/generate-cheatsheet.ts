@@ -1,5 +1,5 @@
 import { client, send, sendError, readBody } from './_shared'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = `You are an expert MUN delegate. Generate a comprehensive cheat sheet as JSON matching this schema exactly:
 {
@@ -16,7 +16,7 @@ const SYSTEM_PROMPT = `You are an expert MUN delegate. Generate a comprehensive 
   "strategyNotes": "string"
 }`
 
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { country, committee, topic, specialRole } = await readBody(req)

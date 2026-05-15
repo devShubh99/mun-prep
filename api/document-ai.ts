@@ -1,5 +1,5 @@
 import { client, send, sendError, readBody } from './_shared'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 const ACTIONS: Record<string, string> = {
   polish: 'Polish the text to make it more diplomatic and professional. Return only the polished text.',
@@ -8,7 +8,7 @@ const ACTIONS: Record<string, string> = {
   'insert-clause': 'Draft a formal working clause on this topic. Return only the clause text.',
 }
 
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { action, documentType, content, context } = await readBody(req)

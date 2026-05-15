@@ -1,5 +1,5 @@
 import { client, send, sendError, readBody } from './_shared'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = (country: string, committee: string, topic: string) =>
   `You are an expert Model United Nations research agent. Your task is to conduct comprehensive research for a delegate representing ${country} in a Model United Nations conference.
@@ -47,7 +47,7 @@ Use credible sources: UN databases, government websites, BBC, Reuters,
 Council on Foreign Relations, and academic sources.
 Cite sources where possible.`
 
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)
   try {
     const { country, committee, topic } = await readBody(req)

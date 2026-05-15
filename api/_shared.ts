@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 export const client = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
@@ -10,21 +10,24 @@ export const client = new OpenAI({
   },
 })
 
-export function send(res: VercelResponse, data: unknown, status = 200) {
-  return res.status(status).json(data)
+export function send(res: ServerResponse, data: unknown, status = 200) {
+  res.writeHead(status, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify(data))
 }
 
-export function sendError(res: VercelResponse, message: string, status = 500) {
-  return res.status(status).json({ error: message })
+export function sendError(res: ServerResponse, message: string, status = 500) {
+  res.writeHead(status, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({ error: message }))
 }
 
-export function readBody(req: VercelRequest): Promise<any> {
-  return new Promise((resolve, reject) => {
-    let body = ''
-    req.on('data', (chunk: string) => body += chunk)
+export function readBody(req: IncomingMessage): Promise<any> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => chunks.push(chunk))
     req.on('end', () => {
+      const body = Buffer.concat(chunks).toString()
       try { resolve(JSON.parse(body)) } catch { resolve({}) }
     })
-    req.on('error', reject)
+    req.on('error', () => resolve({}))
   })
 }
