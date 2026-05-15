@@ -14,6 +14,7 @@ export interface Conference {
 }
 
 export interface CheatSheetJson {
+  _generatedFor?: { country: string; committee: string; topic: string }
   mandate: string
   coreDemands: string[]
   redLines: string[]
@@ -29,6 +30,7 @@ export interface CheatSheetJson {
 
 export interface ResearchJson {
   content: string
+  _generatedFor?: { country: string; committee: string; topic: string }
 }
 
 export interface Document {

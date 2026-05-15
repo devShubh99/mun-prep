@@ -28,7 +28,7 @@ export function generateCheatSheet(params: {
   topic: string
   specialRole?: string
 }) {
-  return request<Record<string, unknown>>('/generate-cheatsheet', params)
+  return request<{ mandate: string; coreDemands: string[]; redLines: string[]; keyArguments: string[]; allies: string[]; opponents: string[]; votingRecord: string; draftClauses: string[]; bilateralRelations: string; qaPairs: { question: string; answer: string }[]; strategyNotes: string }>('/generate-cheatsheet', params)
 }
 
 export function generateResearch(params: {

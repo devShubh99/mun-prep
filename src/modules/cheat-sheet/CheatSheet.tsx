@@ -31,7 +31,12 @@ export default function CheatSheet() {
         topic: conference.topic,
         specialRole: conference.special_role || undefined,
       })
-      const err = await updateConference({ cheat_sheet_data: data as unknown as CheatSheetJson })
+      const err = await updateConference({
+        cheat_sheet_data: {
+          ...(data as CheatSheetJson),
+          _generatedFor: { country: conference.assigned_country, committee: conference.committee, topic: conference.topic },
+        },
+      })
       if (err) setError(err)
     } catch (e: any) {
       setError(e?.message || 'Failed to generate cheat sheet')
@@ -41,9 +46,16 @@ export default function CheatSheet() {
   }
 
   const cs = conference?.cheat_sheet_data
+  const gen = cs?._generatedFor
+  const stale = gen && (gen.country !== conference?.assigned_country || gen.committee !== conference?.committee || gen.topic !== conference?.topic)
 
   return (
     <div>
+      {stale && (
+        <div className="text-sm text-warning bg-warning/10 rounded-lg px-3 py-2 mb-4">
+          Conference details changed since this cheat sheet was generated. <button onClick={handleGenerate} disabled={generating} className="underline font-[500]">Regenerate</button>
+        </div>
+      )}
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}

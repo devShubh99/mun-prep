@@ -22,7 +22,12 @@ export default function ResearchTab() {
         committee: conference.committee,
         topic: conference.topic,
       })
-      const err = await updateConference({ research_data: { content: data.content } })
+      const err = await updateConference({
+        research_data: {
+          content: data.content,
+          _generatedFor: { country: conference.assigned_country, committee: conference.committee, topic: conference.topic },
+        },
+      })
       if (err) setError(err)
     } catch (e: any) {
       setError(e?.message || 'Failed to generate research')
@@ -54,9 +59,16 @@ export default function ResearchTab() {
   }
 
   const researchContent = conference?.research_data?.content
+  const gen = conference?.research_data?._generatedFor
+  const stale = gen && (gen.country !== conference?.assigned_country || gen.committee !== conference?.committee || gen.topic !== conference?.topic)
 
   return (
     <div>
+      {stale && (
+        <div className="text-sm text-warning bg-warning/10 rounded-lg px-3 py-2 mb-4">
+          Conference details changed since this research was generated. <button onClick={handleGenerate} disabled={generating} className="underline font-[500]">Regenerate</button>
+        </div>
+      )}
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}
