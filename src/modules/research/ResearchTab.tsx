@@ -57,6 +57,9 @@ export default function ResearchTab() {
 
   return (
     <div>
+      {error && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
+      )}
       {!researchContent ? (
         <div className="card text-center">
           <p className="text-body mb-4">
@@ -69,9 +72,6 @@ export default function ResearchTab() {
         </div>
       ) : (
         <div>
-          {error && (
-            <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
-          )}
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-[22px] font-[400] tracking-[-0.3px] text-ink">
               Research Briefing — {conference?.assigned_country}

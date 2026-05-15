@@ -44,6 +44,9 @@ export default function CheatSheet() {
 
   return (
     <div>
+      {error && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
+      )}
       {!cs ? (
         <div className="card text-center">
           <p className="text-body mb-4">Generate an AI-powered cheat sheet for {conference?.assigned_country}.</p>
@@ -54,9 +57,6 @@ export default function CheatSheet() {
         </div>
       ) : (
         <div>
-          {error && (
-            <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
-          )}
           <div className="flex items-center justify-between mb-6">
             <div className="flex gap-1 border-b border-hairline">
               {TABS.map(tab => (
