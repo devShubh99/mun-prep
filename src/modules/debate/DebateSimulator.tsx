@@ -24,23 +24,27 @@ export default function DebateSimulator() {
   const [answer, setAnswer] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentEval, setCurrentEval] = useState<DebateFeedback | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<DebateQA[]>([])
 
   useEffect(() => {
     if (!conference) return
+    setError(null)
     supabase
       .from('debate_qa')
       .select('*')
       .eq('conference_id', conference.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setHistory(data as DebateQA[])
+      .then(({ data, error: err }) => {
+        if (err) setError(err.message)
+        else if (data) setHistory(data as DebateQA[])
       })
   }, [conference?.id])
 
   const handleAsk = async () => {
     if (!conference) return
     setLoading(true)
+    setError(null)
     try {
       const { question } = await generateQuestion({
         country: conference.assigned_country,
@@ -51,6 +55,8 @@ export default function DebateSimulator() {
       setCurrentQuestion(question)
       setAnswer('')
       setCurrentEval(null)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to generate question')
     } finally {
       setLoading(false)
     }
@@ -59,6 +65,7 @@ export default function DebateSimulator() {
   const handleSubmitAnswer = async () => {
     if (!conference || !currentQuestion) return
     setLoading(true)
+    setError(null)
     try {
       const evaluation = await evaluateAnswer({
         question: currentQuestion,
@@ -70,13 +77,14 @@ export default function DebateSimulator() {
       })
       setCurrentEval(evaluation)
 
-      await supabase.from('debate_qa').insert({
+      const { error: dbErr } = await supabase.from('debate_qa').insert({
         conference_id: conference.id,
         role,
         question: currentQuestion,
         user_answer: answer,
         evaluation,
       })
+      if (dbErr) { setError(dbErr.message); return }
 
       const { data } = await supabase
         .from('debate_qa')
@@ -84,6 +92,8 @@ export default function DebateSimulator() {
         .eq('conference_id', conference.id)
         .order('created_at', { ascending: false })
       if (data) setHistory(data as DebateQA[])
+    } catch (e: any) {
+      setError(e?.message || 'Failed to evaluate answer')
     } finally {
       setLoading(false)
     }
@@ -112,6 +122,9 @@ export default function DebateSimulator() {
 
       {mode === 'qa' ? (
         <div>
+          {error && (
+            <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
+          )}
           <div className="flex items-center gap-3 mb-6">
             <label htmlFor="debate-role" className="text-sm font-[500] text-body">Role:</label>
             <select id="debate-role" value={role} onChange={e => setRole(e.target.value)} className="input w-auto">

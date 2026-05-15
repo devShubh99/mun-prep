@@ -12,17 +12,20 @@ export default function ResearchChat() {
   const [messages, setMessages] = useState<ResearchChatMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!conference) return
+    setError(null)
     supabase
       .from('research_chat_messages')
       .select('*')
       .eq('conference_id', conference.id)
       .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        if (data) setMessages(data as ResearchChatMessage[])
+      .then(({ data, error: err }) => {
+        if (err) setError(err.message)
+        else if (data) setMessages(data as ResearchChatMessage[])
       })
   }, [conference?.id])
 
@@ -34,6 +37,7 @@ export default function ResearchChat() {
     if (!input.trim() || !conference || !user) return
     const text = input.trim()
     setInput('')
+    setError(null)
 
     const userMsg: ResearchChatMessage = {
       id: crypto.randomUUID(),
@@ -59,7 +63,10 @@ export default function ResearchChat() {
       }
       setMessages(prev => [...prev, assistantMsg])
 
-      await supabase.from('research_chat_messages').insert([userMsg, assistantMsg])
+      const { error: dbErr } = await supabase.from('research_chat_messages').insert([userMsg, assistantMsg])
+      if (dbErr) setError(dbErr.message)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to get response')
     } finally {
       setSending(false)
     }
@@ -68,6 +75,9 @@ export default function ResearchChat() {
   return (
     <div>
       <h3 className="font-[500] text-sm text-muted mb-4">Ask follow-up questions</h3>
+      {error && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-2">{error}</div>
+      )}
       <div className="card-light p-4 space-y-4 max-h-[400px] overflow-y-auto">
         {messages.length === 0 && (
           <p className="text-muted-soft text-sm text-center py-8">Ask a question about the research above.</p>

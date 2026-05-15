@@ -17,9 +17,11 @@ const ACTIONS = [
 
 export default function AiActionButtons({ content, documentType, onResult }: Props) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleAction = async (action: string) => {
     setLoadingAction(action)
+    setError(null)
     try {
       const { result } = await documentAi({ action, documentType, content })
       if (action === 'polish' || action === 'shorten') {
@@ -36,13 +38,19 @@ export default function AiActionButtons({ content, documentType, onResult }: Pro
           onResult(result)
         }
       }
+    } catch (e: any) {
+      setError(e?.message || 'Action failed')
     } finally {
       setLoadingAction(null)
     }
   }
 
   return (
-    <div className="flex gap-2">
+    <div>
+      {error && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-2">{error}</div>
+      )}
+      <div className="flex gap-2">
       {ACTIONS.map(action => (
         <button
           key={action.key}
@@ -58,6 +66,7 @@ export default function AiActionButtons({ content, documentType, onResult }: Pro
           {action.label}
         </button>
       ))}
+      </div>
     </div>
   )
 }

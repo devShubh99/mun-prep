@@ -6,11 +6,12 @@ import type { Conference } from '../types'
 interface ConferenceContextValue {
   conference: Conference | null
   loading: boolean
+  conferenceError: string | null
   conferences: Conference[]
   refreshConferences: () => Promise<void>
-  updateConference: (partial: Partial<Conference>) => Promise<void>
+  updateConference: (partial: Partial<Conference>) => Promise<string | null>
   createConference: (data: Partial<Conference>) => Promise<Conference | null>
-  deleteConference: (id: string) => Promise<void>
+  deleteConference: (id: string) => Promise<string | null>
   setActiveConferenceId: (id: string | null) => void
   activeConferenceId: string | null
 }
@@ -21,6 +22,7 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [conferences, setConferences] = useState<Conference[]>([])
   const [loading, setLoading] = useState(true)
+  const [conferenceError, setConferenceError] = useState<string | null>(null)
   const [activeConferenceId, setActiveConferenceId] = useState<string | null>(null)
 
   const fetchConferences = useCallback(async () => {
@@ -30,12 +32,14 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
       return
     }
     setLoading(true)
-    const { data } = await supabase
+    setConferenceError(null)
+    const { data, error } = await supabase
       .from('conferences')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-    if (data) setConferences(data as Conference[])
+    if (error) setConferenceError(error.message)
+    else if (data) setConferences(data as Conference[])
     setLoading(false)
   }, [user])
 
@@ -46,10 +50,12 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     [conferences, activeConferenceId]
   )
 
-  const updateConference = useCallback(async (partial: Partial<Conference>) => {
-    if (!activeConferenceId) return
-    await supabase.from('conferences').update(partial).eq('id', activeConferenceId)
+  const updateConference = useCallback(async (partial: Partial<Conference>): Promise<string | null> => {
+    if (!activeConferenceId) return null
+    const { error } = await supabase.from('conferences').update(partial).eq('id', activeConferenceId)
+    if (error) return error.message
     setConferences(prev => prev.map(c => c.id === activeConferenceId ? { ...c, ...partial } : c))
+    return null
   }, [activeConferenceId])
 
   const createConference = useCallback(async (data: Partial<Conference>): Promise<Conference | null> => {
@@ -64,17 +70,19 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     return inserted as Conference
   }, [user])
 
-  const deleteConference = useCallback(async (id: string) => {
-    await supabase.from('conferences').delete().eq('id', id)
+  const deleteConference = useCallback(async (id: string): Promise<string | null> => {
+    const { error } = await supabase.from('conferences').delete().eq('id', id)
+    if (error) return error.message
     setConferences(prev => prev.filter(c => c.id !== id))
     if (activeConferenceId === id) setActiveConferenceId(null)
+    return null
   }, [activeConferenceId])
 
   const value = useMemo(() => ({
-    conference, loading, conferences, refreshConferences: fetchConferences,
+    conference, loading, conferenceError, conferences, refreshConferences: fetchConferences,
     updateConference, createConference, deleteConference,
     setActiveConferenceId, activeConferenceId,
-  }), [conference, loading, conferences, fetchConferences, updateConference, createConference, deleteConference, activeConferenceId])
+  }), [conference, loading, conferenceError, conferences, fetchConferences, updateConference, createConference, deleteConference, activeConferenceId])
 
   return (
     <ConferenceContext.Provider value={value}>

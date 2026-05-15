@@ -13,18 +13,21 @@ export default function DocumentWorkshop() {
   const [activeDocId, setActiveDocId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const activeDoc = docs.find(d => d.id === activeDocId)
 
   useEffect(() => {
     if (!conference) return
+    setError(null)
     supabase
       .from('documents')
       .select('*')
       .eq('conference_id', conference.id)
       .eq('archived', false)
       .order('created_at', { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error: err }) => {
+        if (err) { setError(err.message); return }
         if (data) {
           setDocs(data as Document[])
           if (!activeDocId && data.length > 0) setActiveDocId(data[0].id)
@@ -34,14 +37,16 @@ export default function DocumentWorkshop() {
 
   const saveDocument = useCallback(async () => {
     if (!activeDoc) return
-    await supabase.from('documents').update({ content: activeDoc.content, updated_at: new Date().toISOString() }).eq('id', activeDoc.id)
+    const { error: err } = await supabase.from('documents').update({ content: activeDoc.content, updated_at: new Date().toISOString() }).eq('id', activeDoc.id)
+    if (err) setError(err.message)
   }, [activeDoc])
 
   useAutoSave(activeDoc?.content, saveDocument)
 
   const handleCreate = async () => {
     if (!conference) return
-    const { data } = await supabase
+    setError(null)
+    const { data, error: err } = await supabase
       .from('documents')
       .insert({
         conference_id: conference.id,
@@ -51,6 +56,7 @@ export default function DocumentWorkshop() {
       })
       .select()
       .single()
+    if (err) { setError(err.message); return }
     if (data) {
       setDocs(prev => [...prev, data as Document])
       setActiveDocId(data.id)
@@ -58,7 +64,9 @@ export default function DocumentWorkshop() {
   }
 
   const handleArchive = async (id: string) => {
-    await supabase.from('documents').update({ archived: true }).eq('id', id)
+    setError(null)
+    const { error: err } = await supabase.from('documents').update({ archived: true }).eq('id', id)
+    if (err) { setError(err.message); return }
     setDocs(prev => prev.filter(d => d.id !== id))
     if (activeDocId === id) {
       const remaining = docs.filter(d => d.id !== id)
@@ -67,7 +75,9 @@ export default function DocumentWorkshop() {
   }
 
   const handleRename = async (id: string, title: string) => {
-    await supabase.from('documents').update({ title }).eq('id', id)
+    setError(null)
+    const { error: err } = await supabase.from('documents').update({ title }).eq('id', id)
+    if (err) { setError(err.message); return }
     setDocs(prev => prev.map(d => d.id === id ? { ...d, title } : d))
     setRenamingId(null)
   }
@@ -79,6 +89,9 @@ export default function DocumentWorkshop() {
 
   return (
     <div>
+      {error && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
+      )}
       <div className="flex items-center border-b border-hairline mb-4 overflow-x-auto">
         {docs.map(doc => (
           <div

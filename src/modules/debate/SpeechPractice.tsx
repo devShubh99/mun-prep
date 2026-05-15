@@ -10,6 +10,7 @@ export default function SpeechPractice() {
   const [recording, setRecording] = useState(false)
   const [evaluation, setEvaluation] = useState<SpeechEvaluation | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const chunks = useRef<Blob[]>([])
 
@@ -38,7 +39,7 @@ export default function SpeechPractice() {
       mediaRecorder.current = recorder
       setRecording(true)
     } catch {
-      alert('Microphone access denied. Please allow microphone access or type your speech manually.')
+      setError('Microphone access denied. Allow mic access or type your speech manually.')
     }
   }
 
@@ -50,6 +51,7 @@ export default function SpeechPractice() {
   const handleEvaluate = async () => {
     if (!transcript.trim() || !conference) return
     setLoading(true)
+    setError(null)
     try {
       const result = await evaluateSpeech({
         transcript,
@@ -57,6 +59,8 @@ export default function SpeechPractice() {
         cheatSheetContext: JSON.stringify(conference.cheat_sheet_data || {}),
       })
       setEvaluation(result)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to evaluate speech')
     } finally {
       setLoading(false)
     }
@@ -64,6 +68,9 @@ export default function SpeechPractice() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2">{error}</div>
+      )}
       <div className="card-light">
         <h3 className="font-[500] text-sm text-body mb-4">Record or type your speech</h3>
         <div className="flex items-center gap-3 mb-4">

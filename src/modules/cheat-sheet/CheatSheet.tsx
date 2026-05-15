@@ -18,10 +18,12 @@ export default function CheatSheet() {
   const { conference, updateConference } = useConference()
   const [activeTab, setActiveTab] = useState('mandate')
   const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleGenerate = async () => {
     if (!conference) return
     setGenerating(true)
+    setError(null)
     try {
       const data = await generateCheatSheet({
         country: conference.assigned_country,
@@ -29,7 +31,10 @@ export default function CheatSheet() {
         topic: conference.topic,
         specialRole: conference.special_role || undefined,
       })
-      await updateConference({ cheat_sheet_data: data as unknown as CheatSheetJson })
+      const err = await updateConference({ cheat_sheet_data: data as unknown as CheatSheetJson })
+      if (err) setError(err)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to generate cheat sheet')
     } finally {
       setGenerating(false)
     }
@@ -49,6 +54,9 @@ export default function CheatSheet() {
         </div>
       ) : (
         <div>
+          {error && (
+            <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
+          )}
           <div className="flex items-center justify-between mb-6">
             <div className="flex gap-1 border-b border-hairline">
               {TABS.map(tab => (

@@ -4,10 +4,11 @@ import { useConference } from '../hooks/useConference'
 import { Plus, Search, Trash2, Globe } from 'lucide-react'
 
 export default function Dashboard() {
-  const { conferences, createConference, deleteConference, loading } = useConference()
+  const { conferences, createConference, deleteConference, loading, conferenceError } = useConference()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
   const [submitting, setSubmitting] = useState(false)
 
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setError(null)
     const created = await createConference({
       name: form.name,
       assigned_country: form.assigned_country,
@@ -29,9 +31,10 @@ export default function Dashboard() {
       deadline: form.deadline || null,
     })
     setSubmitting(false)
+    if (!created) { setError('Failed to create conference'); return }
     setShowModal(false)
     setForm({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
-    if (created) navigate(`/conference/${created.id}`)
+    navigate(`/conference/${created.id}`)
   }
 
   if (loading) {
@@ -94,6 +97,9 @@ export default function Dashboard() {
           <Plus className="w-4 h-4" /> New Conference
         </button>
       </div>
+      {(error || conferenceError) && (
+        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error || conferenceError}</div>
+      )}
 
       {conferences.length > 0 && (
         <div className="relative mb-6">
