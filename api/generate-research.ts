@@ -1,5 +1,4 @@
-import type { Handler } from '@netlify/functions'
-import { deepseek, ok, error } from './shared'
+import { client, json } from './shared'
 
 const SYSTEM_PROMPT = (country: string, committee: string, topic: string) =>
   `You are an expert Model United Nations research agent. Your task is to conduct comprehensive research for a delegate representing ${country} in a Model United Nations conference.
@@ -47,11 +46,11 @@ Use credible sources: UN databases, government websites, BBC, Reuters,
 Council on Foreign Relations, and academic sources.
 Cite sources where possible.`
 
-export const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'POST') return error(405, 'Method not allowed')
+export default async (req: Request): Promise<Response> => {
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
   try {
-    const { country, committee, topic } = JSON.parse(event.body || '{}')
-    const response = await deepseek.chat.completions.create({
+    const { country, committee, topic } = await req.json()
+    const completion = await client.chat.completions.create({
       model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT(country, committee, topic) },
@@ -60,8 +59,8 @@ export const handler: Handler = async (event) => {
           : `Generate a comprehensive research briefing for ${country} for ${committee}.` },
       ],
     })
-    return ok({ content: response.choices[0].message.content })
+    return json({ content: completion.choices[0].message.content })
   } catch (e: any) {
-    return error(500, e.message)
+    return json({ error: e.message }, 500)
   }
 }

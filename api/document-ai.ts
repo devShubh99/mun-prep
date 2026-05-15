@@ -1,5 +1,4 @@
-import type { Handler } from '@netlify/functions'
-import { deepseek, ok, error } from './shared'
+import { client, json } from './shared'
 
 const ACTIONS: Record<string, string> = {
   polish: 'Polish the text to make it more diplomatic and professional. Return only the polished text.',
@@ -8,20 +7,20 @@ const ACTIONS: Record<string, string> = {
   'insert-clause': 'Draft a formal working clause on this topic. Return only the clause text.',
 }
 
-export const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'POST') return error(405, 'Method not allowed')
+export default async (req: Request): Promise<Response> => {
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
   try {
-    const { action, documentType, content, context } = JSON.parse(event.body || '{}')
+    const { action, documentType, content, context } = await req.json()
     const instruction = ACTIONS[action] || ACTIONS.polish
-    const response = await deepseek.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: `${instruction}\nDocument type: ${documentType}\n${context ? `Context: ${context}` : ''}` },
         { role: 'user', content },
       ],
     })
-    return ok({ result: response.choices[0].message.content?.trim() })
+    return json({ result: completion.choices[0].message.content?.trim() })
   } catch (e: any) {
-    return error(500, e.message)
+    return json({ error: e.message }, 500)
   }
 }

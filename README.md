@@ -8,7 +8,7 @@ A personal MUN (Model United Nations) preparation web app. Helps delegates resea
 - **Backend**: Supabase (auth + database)
 - **AI**: OpenRouter API (proxies `deepseek-v4-flash`)
 - **Editor**: TipTap (ProseMirror) for rich text
-- **Hosting**: Netlify (SPA + serverless functions)
+- **Hosting**: Vercel (SPA + serverless functions)
 
 ## Setup
 
@@ -30,7 +30,7 @@ A personal MUN (Model United Nations) preparation web app. Helps delegates resea
 
    ```
    npm run dev          # Frontend only on :5173
-   npx netlify dev      # Full stack on :8888
+   npx vercel dev       # Full stack on :3000
    ```
 
 4. Build for production:
@@ -72,9 +72,9 @@ Anthropic-inspired cream/coral/navy palette:
 
 Typography: Cormorant Garamond (headlines) + Inter (body) + JetBrains Mono (code). Component classes (`btn-primary`, `.card`, `.input`, `.badge`) defined in `src/index.css`.
 
-## Netlify Functions
+## Vercel Serverless Functions
 
-6 functions in `netlify/functions/` that proxy AI requests through OpenRouter:
+6 functions in `api/` that proxy AI requests through OpenRouter:
 
 | Endpoint | Action |
 |---|---|
@@ -85,7 +85,7 @@ Typography: Cormorant Garamond (headlines) + Inter (body) + JetBrains Mono (code
 | `/api/generate-question` | Generates debate question |
 | `/api/evaluate-answer` | Scores answer + feedback |
 
-All use `shared.ts` (OpenAI SDK → OpenRouter) with model `deepseek-v4-flash`. Requires `OPENROUTER_API_KEY` in Netlify env vars.
+All use `api/shared.ts` (OpenAI SDK → OpenRouter) with model `deepseek-v4-flash`. Requires `OPENROUTER_API_KEY` in Vercel env vars. Function timeout up to 300 seconds (configurable in `vercel.json`).
 
 ## Environment Variables
 
@@ -95,12 +95,12 @@ All use `shared.ts` (OpenAI SDK → OpenRouter) with model `deepseek-v4-flash`. 
 | `VITE_SUPABASE_ANON_KEY` | Build | Supabase anonymous key |
 | `OPENROUTER_API_KEY` | Runtime | OpenRouter API key for AI features |
 
-`VITE_` vars are baked at build time by Vite. `OPENROUTER_API_KEY` is runtime for Netlify Functions.
+`VITE_` vars are baked at build time by Vite. `OPENROUTER_API_KEY` is runtime for serverless functions.
 
 ## Deployment
 
-1. Connect the GitHub repo to Netlify
-2. Set environment variables in Netlify dashboard
-3. Netlify auto-detects build settings from `netlify.toml`
+1. Import the GitHub repo in Vercel dashboard
+2. Set environment variables in Vercel project settings
+3. Deploy — Vercel auto-detects Vite + API functions
 
-SPA routing is handled by `netlify.toml` — `/*` → `/index.html` catch-all after `/api/*` proxy rule.
+SPA routing and function timeout are configured in `vercel.json`.
