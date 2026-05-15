@@ -6,7 +6,7 @@ export const handler: Handler = async (event) => {
   try {
     const { country, committee, topic, role } = JSON.parse(event.body || '{}')
     const response = await deepseek.chat.completions.create({
-      model: 'deepseek-v4-pro',
+      model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: `You are a MUN committee chair. Generate a realistic debate question for a delegate representing ${country} in ${committee} on the topic "${topic}". Role: ${role}. Return only the question text, no JSON.` },
         { role: 'user', content: 'Generate a debate question.' },

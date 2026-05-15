@@ -14,7 +14,7 @@ export const handler: Handler = async (event) => {
     const { action, documentType, content, context } = JSON.parse(event.body || '{}')
     const instruction = ACTIONS[action] || ACTIONS.polish
     const response = await deepseek.chat.completions.create({
-      model: 'deepseek-v4-pro',
+      model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: `${instruction}\nDocument type: ${documentType}\n${context ? `Context: ${context}` : ''}` },
         { role: 'user', content },

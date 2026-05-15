@@ -24,7 +24,7 @@
 - **Data flow**: `supabase` client → `useConference` context (fetches on `user` change) → components.
 - **API proxy**: `vite.config.ts` proxies `/api/*` → `localhost:8888` for local Netlify Functions.
 - **Design system**: Anthropic-style cream/coral/navy palette. `tailwind.config.js` defines custom colors (`canvas`, `ink`, `primary`, `body`, `surface-card`, etc.) and component classes in `src/index.css` (`.btn-primary`, `.card`, `.input`, `.badge`).
-- **5 Netlify functions** — all use `deepseek-v4-pro` via OpenAI SDK (`shared.ts` client), respond JSON via `ok()/error()` helpers.
+- **5 Netlify functions** — all use `deepseek-v4-flash` via OpenAI SDK (`shared.ts` client), respond JSON via `ok()/error()` helpers.
 
 ## Gotchas
 

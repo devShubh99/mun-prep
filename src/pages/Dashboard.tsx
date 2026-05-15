@@ -3,6 +3,175 @@ import { useNavigate } from 'react-router-dom'
 import { useConference } from '../hooks/useConference'
 import { Plus, Search, Trash2, Globe } from 'lucide-react'
 
+const COUNTRIES = [
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
+  'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi',
+  'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica', "Côte d'Ivoire", 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic',
+  'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic',
+  'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia',
+  'Fiji', 'Finland', 'France',
+  'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana',
+  'Haiti', 'Honduras', 'Hungary',
+  'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy',
+  'Jamaica', 'Japan', 'Jordan',
+  'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan',
+  'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg',
+  'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar',
+  'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway',
+  'Oman',
+  'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal',
+  'Qatar',
+  'Romania', 'Russia', 'Rwanda',
+  'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria',
+  'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu',
+  'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan',
+  'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam',
+  'Yemen',
+  'Zambia', 'Zimbabwe',
+]
+
+const COMMITTEES = [
+  'Administrative and Budgetary Committee (ABC)',
+  'Advisory Committee on Administrative and Budgetary Questions (ACABQ)',
+  'Asian Infrastructure Investment Bank (AIIB)',
+  'Arab League (AL)',
+  'Asian Development Bank (ADB)',
+  'Association of Southeast Asian Nations (ASEAN)',
+  'African Union (AU)',
+  'Commission on Crime Prevention and Criminal Justice (CCPCJ)',
+  'European Organization for Nuclear Research (CERN)',
+  'Council of the European Union (CEU)',
+  'Commonwealth of Independent States (CIS)',
+  'Commission on Narcotic Drugs (CND)',
+  'Committee on the Peaceful Uses of Outer Space (COPUOS)',
+  'Commission on Population and Development (CPD)',
+  'Commission on Science and Technology for Development (CSTD)',
+  'Commission on the Status of Women (CSW)',
+  'Comprehensive Nuclear-Test-Ban Treaty Organization (CTBTO)',
+  'Department of Global Communications (DGC)',
+  'Disarmament and International Security Committee (DISEC)',
+  'European Council (EC)',
+  'Economic Commission for Latin America and the Caribbean (ECLAC)',
+  'Economic and Financial Committee (ECOFIN)',
+  'Economic and Social Council (ECOSOC)',
+  'Economic Community of West African States (ECOWAS)',
+  'European Parliament (EP)',
+  'European Union (EU)',
+  'Food and Agriculture Organization (FAO)',
+  'Fédération Internationale de Football Association (FIFA)',
+  'Group of 7 (G7)',
+  'Group of 8 (G8)',
+  'Group of 20 (G20)',
+  'General Assembly (GA)',
+  'Human Rights Council (HRC)',
+  'Historical Security Council (HSC)',
+  'Inter-American Development Bank (IADB)',
+  'International Atomic Energy Agency (IAEA)',
+  'International Civil Aviation Organisation (ICAO)',
+  'International Criminal Court (ICC)',
+  'International Chamber of Commerce (ICC)',
+  'International Court of Justice (ICJ)',
+  'International Committee of the Red Cross (ICRC)',
+  'International Fund for Agricultural Development (IFAD)',
+  'International Labour Organization (ILO)',
+  'International Monetary Fund (IMF)',
+  'International Maritime Organisation (IMO)',
+  'International Criminal Police Organization (INTERPOL)',
+  'International Olympic Committee (IOC)',
+  'International Telecommunications Union (ITU)',
+  'Joint Crisis Committee (JCC)',
+  'League of Nations (LoN)',
+  'North Atlantic Treaty Organization (NATO)',
+  'Organization of Petroleum Exporting Countries (OPEC)',
+  'Organization for Security and Co-operation in Europe (OSCE)',
+  'Peacebuilding Commission (PBC)',
+  'Press Corps (PC)',
+  'Security Council (SC)',
+  'Special Conference on Slavery and Human Trafficking (SCSHT)',
+  'Social, Cultural and Humanitarian Committee (SOCHUM)',
+  'Special Political and Decolonization Committee (SPECPOL)',
+  'UN Commission on Science and Technology for Development (UCoST)',
+  'UN Conference on Trade and Development (UNCTAD)',
+  'UN Development Program (UNDP)',
+  'UN Environment Programme (UNEP)',
+  'UN Educational, Scientific and Cultural Organization (UNESCO)',
+  'UN Framework Convention on Climate Change (UNFCCC)',
+  'UN Population Fund (UNFPA)',
+  'UN High Commissioner for Refugees (UNHCR)',
+  'UN Children\'s Fund (UNICEF)',
+  'UN Industrial Development Organization (UNIDO)',
+  'UN Office for Disaster Risk Reduction (UNISDR)',
+  'UN Office on Drugs and Crime (UNODC)',
+  'UN Office for Outer Space Affairs (UNOOSA)',
+  'UN Permanent Forum on Indigenous Issues (UNPFII)',
+  'UN Entity for Gender Equality (UN Women)',
+  'World Tourism Organization (UNWTO)',
+  'Universal Postal Union (UPU)',
+  'United States Senate (US Senate)',
+  'World Bank (WB)',
+  'World Food Programme (WFP)',
+  'World Health Assembly (WHA)',
+  'World Health Organization (WHO)',
+  'World Meteorological Organization (WMO)',
+  'World Intellectual Property Organization (WIPO)',
+  'World Trade Organization (WTO)',
+]
+
+function Autocomplete({ id, value, onChange, options, placeholder, required }: {
+  id: string; value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; required?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [touched, setTouched] = useState(false)
+  const [query, setQuery] = useState(value)
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
+  const valid = !touched || !required || options.some(o => o.toLowerCase() === value.toLowerCase())
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          id={id}
+          required={required}
+          value={open ? query : value}
+          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onFocus={() => { setOpen(true); setQuery('') }}
+          onBlur={() => { setTimeout(() => setOpen(false), 200); setTouched(true); setQuery(value) }}
+          className={`input pr-8 ${!valid ? 'border-error focus:border-error focus:ring-error' : ''}`}
+          placeholder={placeholder}
+          autoComplete="off"
+        />
+        <svg
+          className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+      {!valid && (
+        <p className="text-xs text-error mt-1">Select a value from the list</p>
+      )}
+      {open && (
+        <div className="absolute z-10 mt-1 w-full bg-canvas border border-hairline rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-soft">No matches found</div>
+          ) : (
+            filtered.map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onMouseDown={() => { onChange(opt); setOpen(false); setQuery(opt) }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-surface-soft ${opt === value ? 'bg-primary/10 text-ink' : 'text-body'}`}
+              >
+                {opt}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { conferences, createConference, deleteConference, loading, conferenceError } = useConference()
   const navigate = useNavigate()
@@ -22,6 +191,16 @@ export default function Dashboard() {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+    if (!COUNTRIES.some(c => c.toLowerCase() === form.assigned_country.toLowerCase())) {
+      setError('Please select a valid country from the list')
+      setSubmitting(false)
+      return
+    }
+    if (!COMMITTEES.some(c => c.toLowerCase() === form.committee.toLowerCase())) {
+      setError('Please select a valid committee from the list')
+      setSubmitting(false)
+      return
+    }
     const created = await createConference({
       name: form.name,
       assigned_country: form.assigned_country,
@@ -57,11 +236,11 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="conf-country" className="block text-sm font-[500] text-body mb-1">Country *</label>
-              <input id="conf-country" required value={form.assigned_country} onChange={e => setForm(p => ({ ...p, assigned_country: e.target.value }))} className="input" placeholder="France" />
+              <Autocomplete id="conf-country" value={form.assigned_country} onChange={v => setForm(p => ({ ...p, assigned_country: v }))} options={COUNTRIES} placeholder="France" required />
             </div>
             <div>
               <label htmlFor="conf-committee" className="block text-sm font-[500] text-body mb-1">Committee *</label>
-              <input id="conf-committee" required value={form.committee} onChange={e => setForm(p => ({ ...p, committee: e.target.value }))} className="input" placeholder="UNSC" />
+              <Autocomplete id="conf-committee" value={form.committee} onChange={v => setForm(p => ({ ...p, committee: v }))} options={COMMITTEES} placeholder="UNSC" required />
             </div>
           </div>
           <div>

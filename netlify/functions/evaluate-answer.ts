@@ -15,7 +15,7 @@ export const handler: Handler = async (event) => {
   try {
     const { question, answer, country, committee, topic, role } = JSON.parse(event.body || '{}')
     const response = await deepseek.chat.completions.create({
-      model: 'deepseek-v4-pro',
+      model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: `${SYSTEM_PROMPT}\nContext: ${country}, ${committee}, ${topic}, Role: ${role}` },
         { role: 'user', content: `Question: ${question}\nAnswer: ${answer}\n\nEvaluate this answer.` },

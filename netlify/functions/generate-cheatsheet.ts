@@ -22,7 +22,7 @@ export const handler: Handler = async (event) => {
     const { country, committee, topic, specialRole } = JSON.parse(event.body || '{}')
     const userPrompt = `Country: ${country}\nCommittee: ${committee}\nTopic: ${topic}${specialRole ? `\nSpecial Role: ${specialRole}` : ''}\n\nGenerate comprehensive cheat sheet JSON.`
     const response = await deepseek.chat.completions.create({
-      model: 'deepseek-v4-pro',
+      model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },

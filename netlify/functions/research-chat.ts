@@ -6,7 +6,7 @@ export const handler: Handler = async (event) => {
   try {
     const { researchContext, question } = JSON.parse(event.body || '{}')
     const response = await deepseek.chat.completions.create({
-      model: 'deepseek-v4-pro',
+      model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: `You are a research assistant. Use the following research context to answer questions:\n\n${researchContext}` },
         { role: 'user', content: question },
