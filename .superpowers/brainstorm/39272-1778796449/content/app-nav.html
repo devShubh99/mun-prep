@@ -1,0 +1,47 @@
+<h2>MUN Prep Companion — App Structure</h2>
+<p class="subtitle">Let's start with how the app navigates. Click your preferred layout.</p>
+
+<div class="mockup" style="max-width: 700px; margin: 0 auto;">
+  <div class="mockup-body" style="text-align: left; padding: 16px;">
+
+    <div style="background: #f0f4f8; border-radius: 8px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #3b82f6;">
+      <strong>📋 Dashboard</strong> — Conference cards, Create/Edit/Delete
+    </div>
+    <div style="text-align: center; color: #94a3b8; font-size: 18px; margin: 4px 0;">⬇ Click a card</div>
+    <div style="background: #f0f4f8; border-radius: 8px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #8b5cf6;">
+      <strong>🏛️ Conference Workspace</strong>
+      <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+        <span style="background: #e2e8f0; padding: 2px 10px; border-radius: 12px; font-size: 12px;">📊 Cheat Sheet</span>
+        <span style="background: #e2e8f0; padding: 2px 10px; border-radius: 12px; font-size: 12px;">🎭 Debate Simulator</span>
+        <span style="background: #e2e8f0; padding: 2px 10px; border-radius: 12px; font-size: 12px;">📝 Documents</span>
+      </div>
+    </div>
+    <div style="text-align: center; color: #94a3b8; font-size: 14px; margin: 2px 0;">⚙️ Settings always accessible</div>
+  </div>
+</div>
+
+<h3>Navigation Style</h3>
+<div class="options">
+  <div class="option" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Sidebar</h3>
+      <p>Left sidebar lists Dashboard + all conferences. Workspace opens in main area. Settings in sidebar footer.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Hybrid (Recommended)</h3>
+      <p>Dashboard is full page. Click a conference → workspace with tabs. Back button to dashboard. Gear icon in top bar. Clean & simple.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="topbar" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Top Bar</h3>
+      <p>Persistent top nav with dropdown or links to dashboard and conferences. Breadcrumb trail inside.</p>
+    </div>
+  </div>
+</div>
+<p style="margin-top: 12px; color: #64748b;">Open http://localhost:51629 and click your preference!</p>
