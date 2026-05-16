@@ -1,24 +1,78 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateCheatSheet } from '../../lib/api'
-import { Sparkles } from 'lucide-react'
+import { countryFlag } from '../../lib/countryFlags'
+import { Sparkles, Copy, Check, Printer, ChevronDown, ChevronRight } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { CheatSheetJson } from '../../types'
 
-const TABS = [
-  { key: 'mandate', label: 'Mandate' },
-  { key: 'coreDemands', label: 'Core Demands' },
-  { key: 'redLines', label: 'Red Lines' },
-  { key: 'alliesOpponents', label: 'Allies & Opponents' },
-  { key: 'votingRecord', label: 'Voting Record' },
-  { key: 'draftClauses', label: 'Draft Clauses' },
-  { key: 'strategy', label: 'Strategy & Q&A' },
+const SECTIONS = [
+  { id: 'mandate', label: 'Mandate' },
+  { id: 'coreDemands', label: 'Core Demands' },
+  { id: 'redLines', label: 'Red Lines' },
+  { id: 'alliesOpponents', label: 'Allies & Opponents' },
+  { id: 'votingRecord', label: 'Voting Record' },
+  { id: 'draftClauses', label: 'Draft Clauses' },
+  { id: 'strategy', label: 'Strategy & Q&A' },
 ]
+
+function CopyBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
+      className="text-muted-soft hover:text-primary transition-colors p-1"
+      title="Copy section"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  )
+}
+
+function alliesRegionData(allies: string[], opponents: string[]) {
+  const regionMap: Record<string, { allies: number; opponents: number }> = {
+    'Europe': { allies: 0, opponents: 0 },
+    'Asia': { allies: 0, opponents: 0 },
+    'Africa': { allies: 0, opponents: 0 },
+    'Americas': { allies: 0, opponents: 0 },
+    'Middle East': { allies: 0, opponents: 0 },
+    'Oceania': { allies: 0, opponents: 0 },
+  }
+  const euCountries = ['France', 'Germany', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden', 'Denmark', 'Finland', 'Poland', 'Portugal', 'Austria', 'Ireland', 'Greece', 'Czech Republic', 'Romania', 'Norway', 'Estonia', 'United Kingdom']
+  const asiaCountries = ['China', 'Japan', 'South Korea', 'India', 'Indonesia', 'Vietnam', 'Thailand', 'Singapore', 'Malaysia', 'Philippines', 'Myanmar', 'Bangladesh', 'Pakistan', 'Sri Lanka', 'Nepal']
+  const africaCountries = ['Nigeria', 'South Africa', 'Kenya', 'Ethiopia', 'Ghana', 'Egypt', 'Morocco', 'Algeria', 'Angola', 'Tanzania']
+  const americasCountries = ['United States', 'Canada', 'Brazil', 'Mexico', 'Argentina', 'Colombia', 'Chile', 'Peru']
+  const middleEastCountries = ['Russia', 'Saudi Arabia', 'Iran', 'Iraq', 'Israel', 'Turkey', 'UAE', 'Qatar', 'Kuwait', 'Oman', 'Syria', 'Yemen']
+  const oceaniaCountries = ['Australia', 'New Zealand']
+
+  const categorize = (name: string) => {
+    if (euCountries.includes(name)) return 'Europe'
+    if (oceaniaCountries.includes(name)) return 'Oceania'
+    if (middleEastCountries.includes(name)) return 'Middle East'
+    if (asiaCountries.includes(name)) return 'Asia'
+    if (africaCountries.includes(name)) return 'Africa'
+    if (americasCountries.includes(name)) return 'Americas'
+    if (['European Union'].includes(name)) return 'Europe'
+    return 'Europe'
+  }
+
+  allies.forEach(a => { const r = categorize(a); if (regionMap[r]) regionMap[r].allies++ })
+  opponents.forEach(o => { const r = categorize(o); if (regionMap[r]) regionMap[r].opponents++ })
+
+  return Object.entries(regionMap).map(([region, v]) => ({ region, allies: v.allies, opponents: v.opponents }))
+}
 
 export default function CheatSheet() {
   const { conference, updateConference } = useConference()
-  const [activeTab, setActiveTab] = useState('mandate')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeQ, setActiveQ] = useState<number | null>(null)
+  const [expandedArgs, setExpandedArgs] = useState<Set<number>>(new Set())
+  const printRef = useRef<HTMLDivElement>(null)
+
+  const cs = conference?.cheat_sheet_data
+  const gen = cs?._generatedFor
+  const stale = gen && (gen.country !== conference?.assigned_country || gen.committee !== conference?.committee || gen.topic !== conference?.topic)
 
   const handleGenerate = async () => {
     if (!conference) return
@@ -32,10 +86,7 @@ export default function CheatSheet() {
         specialRole: conference.special_role || undefined,
       })
       const err = await updateConference({
-        cheat_sheet_data: {
-          ...(data as CheatSheetJson),
-          _generatedFor: { country: conference.assigned_country, committee: conference.committee, topic: conference.topic },
-        },
+        cheat_sheet_data: { ...(data as CheatSheetJson), _generatedFor: { country: conference.assigned_country, committee: conference.committee, topic: conference.topic } },
       })
       if (err) setError(err)
     } catch (e: any) {
@@ -45,132 +96,283 @@ export default function CheatSheet() {
     }
   }
 
-  const cs = conference?.cheat_sheet_data
-  const gen = cs?._generatedFor
-  const stale = gen && (gen.country !== conference?.assigned_country || gen.committee !== conference?.committee || gen.topic !== conference?.topic)
+  const scrollTo = (id: string) => {
+    document.getElementById(`cs-${id}`)?.scrollIntoView({ behavior: 'smooth' })
+  }
 
-  return (
-    <div>
-      {stale && (
-        <div className="text-sm text-warning bg-warning/10 rounded-lg px-3 py-2 mb-4">
-          Conference details changed since this cheat sheet was generated. <button onClick={handleGenerate} disabled={generating} className="underline font-[500]">Regenerate</button>
-        </div>
-      )}
-      {error && (
-        <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
-      )}
-      {!cs ? (
-        <div className="card text-center">
-          <p className="text-body mb-4">Generate an AI-powered cheat sheet for {conference?.assigned_country}.</p>
-          <button onClick={handleGenerate} disabled={generating} className="btn-primary">
-            <Sparkles className="w-4 h-4" />
-            {generating ? 'Generating\u2026' : 'Generate Cheat Sheet'}
+  if (!cs) {
+    return (
+      <div>
+        {error && <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>}
+        <div className="card text-center py-16">
+          <span className="text-5xl mb-4 block">{conference?.assigned_country ? countryFlag(conference.assigned_country) : '\uD83C\uDF10'}</span>
+          <h2 className="font-serif text-[28px] font-[400] text-ink mb-2">{conference?.assigned_country || 'No country selected'}</h2>
+          <p className="text-muted mb-6 max-w-md mx-auto">Generate an AI-powered cheat sheet to prepare for your committee.</p>
+          <button onClick={handleGenerate} disabled={generating} className="btn-primary text-base px-6 py-3">
+            <Sparkles className="w-5 h-5" />
+            {generating ? 'Generating…' : 'Generate Cheat Sheet'}
           </button>
         </div>
-      ) : (
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex gap-1 border-b border-hairline">
-              {TABS.map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`px-4 py-2 text-sm font-[500] border-b-2 transition-colors ${
-                    activeTab === tab.key
-                      ? 'border-primary text-ink'
-                      : 'border-transparent text-muted hover:text-body'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={handleGenerate} disabled={generating} className="btn-ghost text-sm">
-              <Sparkles className="w-3 h-3" />
-              Regenerate
-            </button>
-          </div>
+      </div>
+    )
+  }
 
-          <div className="space-y-4">
-            {activeTab === 'mandate' && (
-              <div className="card-light">
-                <p className="text-body whitespace-pre-wrap">{cs.mandate}</p>
-              </div>
-            )}
-            {activeTab === 'coreDemands' && (
-              <div className="card-light">
-                <ol className="list-decimal pl-5 space-y-2">
-                  {cs.coreDemands.map((d, i) => <li key={i} className="text-body">{d}</li>)}
-                </ol>
-              </div>
-            )}
-            {activeTab === 'redLines' && (
-              <div className="card-light">
-                <ul className="list-disc pl-5 space-y-2">
-                  {cs.redLines.map((r, i) => <li key={i} className="text-body">{r}</li>)}
-                </ul>
-              </div>
-            )}
-            {activeTab === 'alliesOpponents' && (
-              <div className="grid grid-cols-2 gap-6">
-                <div className="card-light">
-                  <h3 className="font-[500] text-sm text-muted mb-3">Allies</h3>
-                  <ul className="space-y-1">
-                    {cs.allies.map((a, i) => <li key={i} className="text-body">{a}</li>)}
-                  </ul>
-                </div>
-                <div className="card-light">
-                  <h3 className="font-[500] text-sm text-muted mb-3">Opponents</h3>
-                  <ul className="space-y-1">
-                    {cs.opponents.map((o, i) => <li key={i} className="text-body">{o}</li>)}
-                  </ul>
-                </div>
-              </div>
-            )}
-            {activeTab === 'votingRecord' && (
-              <div className="card-light">
-                <p className="text-body whitespace-pre-wrap">{cs.votingRecord}</p>
-              </div>
-            )}
-            {activeTab === 'draftClauses' && (
-              <div className="card-light">
-                <ol className="list-decimal pl-5 space-y-2">
-                  {cs.draftClauses.map((c, i) => <li key={i} className="text-body">{c}</li>)}
-                </ol>
-              </div>
-            )}
-            {activeTab === 'strategy' && (
-              <div className="space-y-4">
-                <div className="card-light">
-                  <h3 className="font-[500] text-sm text-muted mb-2">Key Arguments</h3>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {cs.keyArguments.map((a, i) => <li key={i} className="text-body">{a}</li>)}
-                  </ul>
-                </div>
-                <div className="card-light">
-                  <h3 className="font-[500] text-sm text-muted mb-2">Bilateral Relations</h3>
-                  <p className="text-body whitespace-pre-wrap">{cs.bilateralRelations}</p>
-                </div>
-                <div className="card-light">
-                  <h3 className="font-[500] text-sm text-muted mb-2">Q&A Pairs</h3>
-                  <div className="space-y-3">
-                    {cs.qaPairs.map((qa, i) => (
-                      <div key={i}>
-                        <p className="font-[500] text-sm text-ink">Q: {qa.question}</p>
-                        <p className="text-body text-sm">A: {qa.answer}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="card-light">
-                  <h3 className="font-[500] text-sm text-muted mb-2">Strategy Notes</h3>
-                  <p className="text-body whitespace-pre-wrap">{cs.strategyNotes}</p>
-                </div>
-              </div>
-            )}
-          </div>
+  const regionData = alliesRegionData(cs.allies, cs.opponents)
+
+  return (
+    <div ref={printRef}>
+      {stale && (
+        <div className="text-sm text-warning bg-warning/10 rounded-lg px-3 py-2 mb-4">
+          Conference details changed since this cheat sheet was generated.{' '}
+          <button onClick={handleGenerate} disabled={generating} className="underline font-[500]">Regenerate</button>
         </div>
       )}
+      {error && <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>}
+
+      {/* Hero */}
+      <div className="card-light mb-6 print:mb-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-4xl">{countryFlag(conference?.assigned_country || '')}</span>
+              <h1 className="font-serif text-[32px] font-[400] tracking-[-0.5px] text-ink">{conference?.assigned_country}</h1>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="badge bg-primary/10 text-primary text-xs">{conference?.committee}</span>
+              {conference?.topic && <span className="badge bg-surface-card text-body text-xs">{conference.topic}</span>}
+              {conference?.special_role && <span className="badge bg-accent-amber/10 text-accent-amber text-xs">{conference.special_role}</span>}
+            </div>
+          </div>
+          <div className="flex gap-2 no-print">
+            <button onClick={() => window.print()} className="btn-ghost text-xs">
+              <Printer className="w-3.5 h-3.5" /> Print
+            </button>
+            <button onClick={handleGenerate} disabled={generating} className="btn-ghost text-xs">
+              <Sparkles className="w-3.5 h-3.5" /> Regenerate
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-6">
+        {/* Quick nav */}
+        <nav className="hidden lg:block w-44 shrink-0 no-print">
+          <div className="sticky top-24 space-y-0.5">
+            {SECTIONS.map(s => (
+              <button
+                key={s.id}
+                onClick={() => scrollTo(s.id)}
+                className="block w-full text-left px-3 py-1.5 text-sm text-muted hover:text-ink hover:bg-surface-soft rounded-lg transition-colors"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {/* Content */}
+        <div className="flex-1 space-y-8 print:space-y-6">
+
+          {/* 1. Mandate */}
+          <section id="cs-mandate" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Mandate</h2>
+              <CopyBtn text={cs.mandate} />
+            </div>
+            <div className="card-light border-l-4 border-l-primary">
+              <p className="text-body leading-relaxed whitespace-pre-wrap">{cs.mandate}</p>
+            </div>
+          </section>
+
+          {/* 2. Core Demands */}
+          <section id="cs-coreDemands" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Core Demands</h2>
+              <CopyBtn text={cs.coreDemands.map((d, i) => `${i + 1}. ${d}`).join('\n')} />
+            </div>
+            <div className="space-y-2">
+              {cs.coreDemands.map((d, i) => (
+                <div key={i} className="card-light flex items-start gap-4 border-l-4 border-l-primary">
+                  <span className="font-serif text-[28px] font-[400] text-primary leading-none mt-1 w-8 text-center">{i + 1}</span>
+                  <p className="text-body flex-1">{d}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 3. Red Lines */}
+          <section id="cs-redLines" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Red Lines</h2>
+              <CopyBtn text={cs.redLines.map(r => `• ${r}`).join('\n')} />
+            </div>
+            <div className="space-y-2">
+              {cs.redLines.map((r, i) => (
+                <div key={i} className="bg-error/5 rounded-xl px-4 py-3 border-l-4 border-l-error flex items-start gap-3">
+                  <span className="text-error shrink-0 mt-0.5">⚠️</span>
+                  <p className="text-body text-sm">{r}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 4. Allies & Opponents */}
+          <section id="cs-alliesOpponents" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Allies &amp; Opponents</h2>
+              <CopyBtn text={`ALLIES:\n${cs.allies.map(a => `• ${a}`).join('\n')}\n\nOPPONENTS:\n${cs.opponents.map(o => `• ${o}`).join('\n')}`} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="card-light border-l-4 border-l-success">
+                <h3 className="text-sm font-[500] text-success mb-3">Allies</h3>
+                <ul className="space-y-1.5">
+                  {cs.allies.map((a, i) => (
+                    <li key={i} className="text-sm text-body flex items-center gap-2">
+                      <span>{countryFlag(a)}</span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card-light border-l-4 border-l-error">
+                <h3 className="text-sm font-[500] text-error mb-3">Opponents</h3>
+                <ul className="space-y-1.5">
+                  {cs.opponents.map((o, i) => (
+                    <li key={i} className="text-sm text-body flex items-center gap-2">
+                      <span>{countryFlag(o)}</span>
+                      <span>{o}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {regionData.some(d => d.allies > 0 || d.opponents > 0) && (
+              <div className="card-light no-print">
+                <h3 className="text-sm font-[500] text-muted mb-3">By Region</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={regionData} layout="vertical" barCategoryGap={8}>
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#6c6a64' }} />
+                    <YAxis dataKey="region" type="category" width={90} tick={{ fontSize: 11, fill: '#3d3d3a' }} />
+                    <Tooltip />
+                    <Bar dataKey="allies" fill="#5db872" radius={[0, 4, 4, 0]} name="Allies" />
+                    <Bar dataKey="opponents" fill="#c64545" radius={[0, 4, 4, 0]} name="Opponents" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
+
+          {/* 5. Voting Record */}
+          <section id="cs-votingRecord" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Voting Record</h2>
+              <CopyBtn text={cs.votingRecord} />
+            </div>
+            <div className="card-light border-l-4 border-l-accent-teal">
+              <p className="text-body leading-relaxed whitespace-pre-wrap">{cs.votingRecord}</p>
+            </div>
+          </section>
+
+          {/* 6. Draft Clauses */}
+          <section id="cs-draftClauses" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Draft Clauses</h2>
+              <CopyBtn text={cs.draftClauses.map((c, i) => `Clause ${i + 1}. ${c}`).join('\n')} />
+            </div>
+            <div className="space-y-2">
+              {cs.draftClauses.map((c, i) => (
+                <div key={i} className="card-light flex items-start gap-3">
+                  <span className="badge bg-accent-amber/10 text-accent-amber shrink-0 mt-0.5">Clause {i + 1}</span>
+                  <p className="text-body text-sm">{c}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 7. Strategy & Q&A */}
+          <section id="cs-strategy" className="scroll-mt-24">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="font-serif text-[22px] font-[400] text-ink">Strategy &amp; Q&amp;A</h2>
+            </div>
+
+            {/* Key Arguments */}
+            <div className="card-light mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-[500] text-sm text-body">Key Arguments</h3>
+                <CopyBtn text={cs.keyArguments.map((a, i) => `${i + 1}. ${a}`).join('\n')} />
+              </div>
+              <ul className="space-y-2">
+                {cs.keyArguments.map((a, i) => {
+                  const expanded = expandedArgs.has(i)
+                  return (
+                    <li key={i}>
+                      <button
+                        onClick={() => setExpandedArgs(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })}
+                        className="w-full text-left flex items-start gap-3 p-2 rounded-lg hover:bg-surface-soft transition-colors"
+                      >
+                        <span className="text-primary mt-0.5">{expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</span>
+                        <span className="text-sm text-body flex-1">{a}</span>
+                      </button>
+                      <div className="w-full bg-surface-soft rounded-full h-1.5 ml-9 mb-1">
+                        <div className="bg-primary rounded-full h-1.5" style={{ width: `${60 + Math.abs(i - 2) * 15}%` }} />
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            {/* Bilateral Relations */}
+            <div className="card-light mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-[500] text-sm text-body">Bilateral Relations</h3>
+                <CopyBtn text={cs.bilateralRelations} />
+              </div>
+              <p className="text-body text-sm whitespace-pre-wrap leading-relaxed">{cs.bilateralRelations}</p>
+            </div>
+
+            {/* Q&A */}
+            <div className="card-light mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-[500] text-sm text-body">Q&amp;A Pairs</h3>
+                <CopyBtn text={cs.qaPairs.map(qa => `Q: ${qa.question}\nA: ${qa.answer}`).join('\n\n')} />
+              </div>
+              <div className="space-y-1">
+                {cs.qaPairs.map((qa, i) => (
+                  <div key={i}>
+                    <button
+                      onClick={() => setActiveQ(activeQ === i ? null : i)}
+                      className="w-full text-left flex items-start gap-3 p-3 rounded-lg hover:bg-surface-soft transition-colors"
+                    >
+                      <span className="text-primary mt-0.5">{activeQ === i ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</span>
+                      <span className="text-sm font-[500] text-body flex-1">{qa.question}</span>
+                    </button>
+                    {activeQ === i && (
+                      <div className="ml-9 pb-3">
+                        <p className="text-sm text-muted bg-surface-soft rounded-lg p-3">{qa.answer}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Strategy Notes */}
+            <div className="card-light bg-accent-amber/5 border border-accent-amber/20">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-[500] text-sm text-body flex items-center gap-2">
+                  <span>💡</span> Strategy Notes
+                </h3>
+                <CopyBtn text={cs.strategyNotes} />
+              </div>
+              <p className="text-body text-sm whitespace-pre-wrap leading-relaxed">{cs.strategyNotes}</p>
+            </div>
+          </section>
+
+        </div>
+      </div>
     </div>
   )
 }

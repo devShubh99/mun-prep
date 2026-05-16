@@ -36,3 +36,19 @@
     @apply inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-[500];
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  .card-light {
+    border: 1px solid #e6dfd8 !important;
+    break-inside: avoid;
+  }
+  section {
+    break-inside: avoid;
+  }
+}

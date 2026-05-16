@@ -14,8 +14,8 @@
 | `npm run dev` | Frontend dev server on `:5173` |
 | `npm run build` | `tsc -b && vite build` |
 | `npx vercel dev` | Full stack (frontend + functions) on `:3000` |
-| `npm run test:unit` | Vitest (was 26 tests, old tests may be stale after revamp) |
-| `npm run test:e2e` | Playwright (14 tests, needs preview on `:4174`, **all broken** — target old app) |
+| `npm run test:unit` | Vitest (9 tests — countryFlags utility) |
+| `npm run test:e2e` | Playwright (9 tests — login/signup pages, design system, redirect, validation. Needs preview on `:4174`) |
 
 ## Architecture
 
@@ -32,8 +32,7 @@
 - **Env vars**: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in Vercel (baked at build time by Vite). `OPENROUTER_API_KEY` is runtime for functions.
 - **SPA routing**: `vercel.json` has `/* → /index.html` rewrite rule. Order matters — API routes first, then SPA catch-all.
 - **`index.css` font import order**: Google Fonts `@import` sits after `@tailwind` directives — produces a PostCSS warning but works. Move it above `@tailwind` to fix.
-- **E2E tests stale**: `e2e.mjs` targets old localStorage/Gemini app. All 14 tests will fail on current code.
-- **Old test directories deleted**: `src/hooks/__tests__`, `src/components/__tests__`, `src/lib/__tests__` were removed during revamp. Old unit tests used the old localStorage types.
+- **Old test directories deleted**: `src/hooks/__tests__`, `src/components/__tests__` were removed during revamp. Old unit tests used the old localStorage types.
 
 ## Key files
 
