@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateCheatSheet } from '../../lib/api'
 import { countryFlag } from '../../lib/countryFlags'
-import { Sparkles, Copy, Check, Printer, ChevronDown, ChevronRight } from 'lucide-react'
+import { Sparkles, Copy, Check, Printer } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { CheatSheetJson } from '../../types'
 
@@ -66,8 +66,6 @@ export default function CheatSheet() {
   const { conference, updateConference } = useConference()
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeQ, setActiveQ] = useState<number | null>(null)
-  const [expandedArgs, setExpandedArgs] = useState<Set<number>>(new Set())
   const printRef = useRef<HTMLDivElement>(null)
 
   const cs = conference?.cheat_sheet_data
@@ -179,8 +177,8 @@ export default function CheatSheet() {
               <h2 className="font-serif text-[22px] font-[400] text-ink">Mandate</h2>
               <CopyBtn text={cs.mandate} />
             </div>
-            <div className="card-light border-l-4 border-l-primary">
-              <p className="text-body leading-relaxed whitespace-pre-wrap">{cs.mandate}</p>
+            <div className="bg-primary/5 rounded-xl px-4 py-3 border-l-4 border-l-primary">
+              <p className="text-body text-sm whitespace-pre-wrap">{cs.mandate}</p>
             </div>
           </section>
 
@@ -192,9 +190,9 @@ export default function CheatSheet() {
             </div>
             <div className="space-y-2">
               {cs.coreDemands.map((d, i) => (
-                <div key={i} className="card-light flex items-start gap-4 border-l-4 border-l-primary">
-                  <span className="font-serif text-[28px] font-[400] text-primary leading-none mt-1 w-8 text-center">{i + 1}</span>
-                  <p className="text-body flex-1">{d}</p>
+                <div key={i} className="bg-primary/5 rounded-xl px-4 py-3 border-l-4 border-l-primary flex items-start gap-3">
+                  <span className="font-serif text-xl font-[400] text-primary leading-none mt-0.5 w-7 text-center shrink-0">{i + 1}</span>
+                  <p className="text-body text-sm">{d}</p>
                 </div>
               ))}
             </div>
@@ -224,7 +222,7 @@ export default function CheatSheet() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="card-light border-l-4 border-l-success">
+              <div className="rounded-xl px-4 py-3 bg-success/5 border-l-4 border-l-success">
                 <h3 className="text-sm font-[500] text-success mb-3">Allies</h3>
                 <ul className="space-y-1.5">
                   {cs.allies.map((a, i) => (
@@ -235,7 +233,7 @@ export default function CheatSheet() {
                   ))}
                 </ul>
               </div>
-              <div className="card-light border-l-4 border-l-error">
+              <div className="rounded-xl px-4 py-3 bg-error/5 border-l-4 border-l-error">
                 <h3 className="text-sm font-[500] text-error mb-3">Opponents</h3>
                 <ul className="space-y-1.5">
                   {cs.opponents.map((o, i) => (
@@ -270,8 +268,8 @@ export default function CheatSheet() {
               <h2 className="font-serif text-[22px] font-[400] text-ink">Voting Record</h2>
               <CopyBtn text={cs.votingRecord} />
             </div>
-            <div className="card-light border-l-4 border-l-accent-teal">
-              <p className="text-body leading-relaxed whitespace-pre-wrap">{cs.votingRecord}</p>
+            <div className="bg-accent-teal/5 rounded-xl px-4 py-3 border-l-4 border-l-accent-teal">
+              <p className="text-body text-sm whitespace-pre-wrap">{cs.votingRecord}</p>
             </div>
           </section>
 
@@ -283,8 +281,8 @@ export default function CheatSheet() {
             </div>
             <div className="space-y-2">
               {cs.draftClauses.map((c, i) => (
-                <div key={i} className="card-light flex items-start gap-3">
-                  <span className="badge bg-accent-amber/10 text-accent-amber shrink-0 mt-0.5">Clause {i + 1}</span>
+                <div key={i} className="bg-accent-amber/5 rounded-xl px-4 py-3 border-l-4 border-l-accent-amber flex items-start gap-3">
+                  <span className="text-xs font-[500] text-accent-amber shrink-0 mt-0.5 min-w-[68px]">Clause {i + 1}</span>
                   <p className="text-body text-sm">{c}</p>
                 </div>
               ))}
@@ -298,35 +296,24 @@ export default function CheatSheet() {
             </div>
 
             {/* Key Arguments */}
-            <div className="card-light mb-4">
+            <div className="rounded-xl px-4 py-3 bg-surface-soft/50 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-[500] text-sm text-body">Key Arguments</h3>
                 <CopyBtn text={cs.keyArguments.map((a, i) => `${i + 1}. ${a}`).join('\n')} />
               </div>
-              <ul className="space-y-2">
-                {cs.keyArguments.map((a, i) => {
-                  const expanded = expandedArgs.has(i)
-                  return (
-                    <li key={i}>
-                      <button
-                        onClick={() => setExpandedArgs(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })}
-                        className="w-full text-left flex items-start gap-3 p-2 rounded-lg hover:bg-surface-soft transition-colors"
-                      >
-                        <span className="text-primary mt-0.5">{expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</span>
-                        <span className="text-sm text-body flex-1">{a}</span>
-                      </button>
-                      <div className="w-full bg-surface-soft rounded-full h-1.5 ml-9 mb-1">
-                        <div className="bg-primary rounded-full h-1.5" style={{ width: `${60 + Math.abs(i - 2) * 15}%` }} />
-                      </div>
-                    </li>
-                  )
-                })}
+              <ul className="space-y-1.5">
+                {cs.keyArguments.map((a, i) => (
+                  <li key={i} className="flex items-start gap-3 px-3 py-2 rounded-lg bg-canvas">
+                    <span className="text-xs font-[500] text-primary shrink-0 mt-0.5 w-5 text-right">{i + 1}.</span>
+                    <span className="text-sm text-body">{a}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
             {/* Bilateral Relations */}
-            <div className="card-light mb-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="rounded-xl px-4 py-3 bg-surface-soft/50 mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="font-[500] text-sm text-body">Bilateral Relations</h3>
                 <CopyBtn text={cs.bilateralRelations} />
               </div>
@@ -334,33 +321,29 @@ export default function CheatSheet() {
             </div>
 
             {/* Q&A */}
-            <div className="card-light mb-4">
+            <div className="rounded-xl px-4 py-3 bg-surface-soft/50 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-[500] text-sm text-body">Q&amp;A Pairs</h3>
                 <CopyBtn text={cs.qaPairs.map(qa => `Q: ${qa.question}\nA: ${qa.answer}`).join('\n\n')} />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-3">
                 {cs.qaPairs.map((qa, i) => (
                   <div key={i}>
-                    <button
-                      onClick={() => setActiveQ(activeQ === i ? null : i)}
-                      className="w-full text-left flex items-start gap-3 p-3 rounded-lg hover:bg-surface-soft transition-colors"
-                    >
-                      <span className="text-primary mt-0.5">{activeQ === i ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</span>
-                      <span className="text-sm font-[500] text-body flex-1">{qa.question}</span>
-                    </button>
-                    {activeQ === i && (
-                      <div className="ml-9 pb-3">
-                        <p className="text-sm text-muted bg-surface-soft rounded-lg p-3">{qa.answer}</p>
-                      </div>
-                    )}
+                    <div className="bg-primary/5 rounded-t-xl px-4 py-3 border-l-4 border-l-primary">
+                      <span className="text-xs font-[500] text-primary">Q{i + 1}</span>
+                      <p className="text-sm text-body mt-0.5">{qa.question}</p>
+                    </div>
+                    <div className="bg-canvas rounded-b-xl px-4 py-3 border-l-4 border-l-muted-soft -mt-px">
+                      <span className="text-xs font-[500] text-muted">A</span>
+                      <p className="text-sm text-muted mt-0.5">{qa.answer}</p>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Strategy Notes */}
-            <div className="card-light bg-accent-amber/5 border border-accent-amber/20">
+            <div className="rounded-xl px-4 py-3 bg-accent-amber/5 border border-accent-amber/20">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-[500] text-sm text-body flex items-center gap-2">
                   <span>💡</span> Strategy Notes
