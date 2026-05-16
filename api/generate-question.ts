@@ -1,4 +1,4 @@
-import { callDeepSeek, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared.js'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 export default async (req: IncomingMessage, res: ServerResponse) => {

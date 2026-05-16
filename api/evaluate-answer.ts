@@ -1,4 +1,4 @@
-import { callDeepSeek, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared.js'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = `You are a MUN evaluator. Score the delegate's answer and return JSON:

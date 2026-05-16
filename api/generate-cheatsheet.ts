@@ -1,4 +1,4 @@
-import { callDeepSeek, send, sendError, readBody } from './_shared'
+import { callDeepSeek, send, sendError, readBody } from './_shared.js'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = `You are an expert MUN delegate. Generate a comprehensive cheat sheet as JSON matching this schema exactly:
