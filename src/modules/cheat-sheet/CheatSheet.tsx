@@ -29,8 +29,6 @@ function CopyBtn({ text }: { text: string }) {
   )
 }
 
-function stripDesc(s: string) { return s.replace(/ *\(.*?\)/g, '').trim() }
-
 function alliesRegionData(allies: string[], opponents: string[]) {
   const regionMap: Record<string, { allies: number; opponents: number }> = {
     'Europe': { allies: 0, opponents: 0 },
@@ -58,8 +56,9 @@ function alliesRegionData(allies: string[], opponents: string[]) {
     return 'Europe'
   }
 
-  allies.forEach(a => { const r = categorize(stripDesc(a)); if (regionMap[r]) regionMap[r].allies++ })
-  opponents.forEach(o => { const r = categorize(stripDesc(o)); if (regionMap[r]) regionMap[r].opponents++ })
+  const clean = (s: string) => s.replace(/ *\(.*?\)/g, '').trim()
+  allies.forEach(a => { const r = categorize(clean(a)); if (regionMap[r]) regionMap[r].allies++ })
+  opponents.forEach(o => { const r = categorize(clean(o)); if (regionMap[r]) regionMap[r].opponents++ })
 
   return Object.entries(regionMap).map(([region, v]) => ({ region, allies: v.allies, opponents: v.opponents }))
 }
@@ -228,7 +227,7 @@ export default function CheatSheet() {
                 <h3 className="text-sm font-[500] text-success mb-3">Allies</h3>
                 <ul className="space-y-1.5">
                   {cs.allies.map((a, i) => {
-                    const name = stripDesc(a)
+                    const name = a.replace(/ *\(.*?\)/g, '').trim()
                     return (
                       <li key={i} className="text-sm text-body flex items-center gap-2">
                         <span>{countryFlag(name)}</span>
@@ -242,7 +241,7 @@ export default function CheatSheet() {
                 <h3 className="text-sm font-[500] text-error mb-3">Opponents</h3>
                 <ul className="space-y-1.5">
                   {cs.opponents.map((o, i) => {
-                    const name = stripDesc(o)
+                    const name = o.replace(/ *\(.*?\)/g, '').trim()
                     return (
                       <li key={i} className="text-sm text-body flex items-center gap-2">
                         <span>{countryFlag(name)}</span>
