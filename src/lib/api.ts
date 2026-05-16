@@ -59,6 +59,7 @@ export function generateQuestion(params: {
   country: string
   committee: string
   topic: string
+  difficulty: string
   role: string
 }) {
   return request<{ question: string }>('/generate-question', params)
@@ -70,6 +71,7 @@ export function evaluateAnswer(params: {
   country: string
   committee: string
   topic: string
+  difficulty: string
   role: string
 }) {
   return request<{

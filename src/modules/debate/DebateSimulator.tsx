@@ -9,12 +9,12 @@ import { Copy, Check, ChevronDown, ChevronRight } from 'lucide-react'
 
 import type { DebateQA, DebateFeedback } from '../../types'
 
-const DEBATE_ROLES = [
-  { value: 'UfC', label: 'Unilateralist for Change' },
-  { value: 'G4', label: 'Group of 4' },
-  { value: 'Chair', label: 'Committee Chair' },
-  { value: 'Swing', label: 'Swing State' },
-  { value: 'Journalist', label: 'Journalist' },
+const DIFFICULTY_LEVELS = [
+  { difficulty: 'very-easy', role: 'Chair', label: 'Very Easy — Chair' },
+  { difficulty: 'easy', role: 'Unilateralist for Change', label: 'Easy — Unilateralist for Change' },
+  { difficulty: 'medium', role: 'Group of 4', label: 'Medium — Group of 4' },
+  { difficulty: 'hard', role: 'Swing State', label: 'Hard — Swing State' },
+  { difficulty: 'expert', role: 'Journalist', label: 'Expert — Journalist' },
 ]
 
 function CopyBtn({ text }: { text: string }) {
@@ -32,7 +32,7 @@ function CopyBtn({ text }: { text: string }) {
 
 export default function DebateSimulator() {
   const { conference } = useConference()
-  const [role, setRole] = useState('UfC')
+  const [difficulty, setDifficulty] = useState('easy')
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
   const [answer, setAnswer] = useState('')
   const [loading, setLoading] = useState(false)
@@ -55,8 +55,10 @@ export default function DebateSimulator() {
       })
   }, [conference?.id])
 
+  const currentLevel = DIFFICULTY_LEVELS.find(l => l.difficulty === difficulty)
+
   const handleAsk = async () => {
-    if (!conference) return
+    if (!conference || !currentLevel) return
     setLoading(true)
     setError(null)
     try {
@@ -64,7 +66,8 @@ export default function DebateSimulator() {
         country: conference.assigned_country,
         committee: conference.committee,
         topic: conference.topic,
-        role,
+        difficulty: currentLevel.difficulty,
+        role: currentLevel.role,
       })
       setCurrentQuestion(question)
       setAnswer('')
@@ -77,7 +80,7 @@ export default function DebateSimulator() {
   }
 
   const handleSubmitAnswer = async () => {
-    if (!conference || !currentQuestion) return
+    if (!conference || !currentQuestion || !currentLevel) return
     setLoading(true)
     setError(null)
     try {
@@ -87,13 +90,14 @@ export default function DebateSimulator() {
         country: conference.assigned_country,
         committee: conference.committee,
         topic: conference.topic,
-        role,
+        difficulty: currentLevel.difficulty,
+        role: currentLevel.role,
       })
       setCurrentEval(evaluation)
 
       const { error: dbErr } = await supabase.from('debate_qa').insert({
         conference_id: conference.id,
-        role,
+        role: currentLevel?.label || '',
         question: currentQuestion,
         user_answer: answer,
         evaluation,
@@ -120,9 +124,9 @@ export default function DebateSimulator() {
       )}
       {loading && <div className="mb-4"><ProgressBar /></div>}
       <div className="flex items-center gap-3 mb-6">
-        <label htmlFor="debate-role" className="text-sm font-[500] text-body">Role:</label>
-        <select id="debate-role" value={role} onChange={e => setRole(e.target.value)} className="input w-auto">
-          {DEBATE_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+        <label htmlFor="debate-difficulty" className="text-sm font-[500] text-body">Difficulty:</label>
+        <select id="debate-difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value)} className="input w-auto">
+          {DIFFICULTY_LEVELS.map(l => <option key={l.difficulty} value={l.difficulty}>{l.label}</option>)}
         </select>
         <button onClick={handleAsk} disabled={loading} className="btn-primary">
           {loading ? 'Generating\u2026' : 'Ask Question'}
