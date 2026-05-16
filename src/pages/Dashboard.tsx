@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConference } from '../hooks/useConference'
-import { Plus, Search, Trash2, Globe } from 'lucide-react'
+import { Plus, Search, Trash2, Globe, Edit2, Copy } from 'lucide-react'
 
 const COUNTRIES = [
   'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
@@ -173,11 +173,13 @@ function Autocomplete({ id, value, onChange, options, placeholder, required }: {
 }
 
 export default function Dashboard() {
-  const { conferences, createConference, deleteConference, loading, conferenceError } = useConference()
+  const { conferences, createConference, deleteConference, updateConference, loading, conferenceError } = useConference()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [sort, setSort] = useState<'newest' | 'deadline' | 'name'>('newest')
   const [form, setForm] = useState({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
   const [submitting, setSubmitting] = useState(false)
 
@@ -187,33 +189,78 @@ export default function Dashboard() {
     )
   )
 
-  const handleCreate = async (e: FormEvent) => {
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'deadline') {
+      if (!a.deadline) return 1; if (!b.deadline) return -1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    }
+    if (sort === 'name') return a.name.localeCompare(b.name)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+
+  const openNew = () => {
+    setEditingId(null)
+    setForm({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
+    setShowModal(true)
+  }
+
+  const openEdit = (c: typeof conferences[0]) => {
+    setEditingId(c.id)
+    setForm({
+      name: c.name,
+      assigned_country: c.assigned_country,
+      committee: c.committee,
+      topic: c.topic || '',
+      special_role: c.special_role || '',
+      deadline: c.deadline || '',
+    })
+    setShowModal(true)
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
     if (!COUNTRIES.some(c => c.toLowerCase() === form.assigned_country.toLowerCase())) {
-      setError('Please select a valid country from the list')
-      setSubmitting(false)
-      return
+      setError('Please select a valid country from the list'); setSubmitting(false); return
     }
     if (!COMMITTEES.some(c => c.toLowerCase() === form.committee.toLowerCase())) {
-      setError('Please select a valid committee from the list')
-      setSubmitting(false)
-      return
+      setError('Please select a valid committee from the list'); setSubmitting(false); return
     }
-    const created = await createConference({
+    const payload = {
       name: form.name,
       assigned_country: form.assigned_country,
       committee: form.committee,
       topic: form.topic,
       special_role: form.special_role || null,
       deadline: form.deadline || null,
+    }
+    if (editingId) {
+      const err = await updateConference(payload)
+      if (err) { setError(err); setSubmitting(false); return }
+      setShowModal(false); setEditingId(null); setSubmitting(false)
+      setForm({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
+    } else {
+      const created = await createConference(payload)
+      setSubmitting(false)
+      if (!created) { setError('Failed to create conference'); return }
+      setShowModal(false)
+      setForm({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
+      navigate(`/conference/${created.id}`)
+    }
+  }
+
+  const handleDuplicate = async (c: typeof conferences[0]) => {
+    setError(null)
+    const created = await createConference({
+      name: `${c.name} (copy)`,
+      assigned_country: c.assigned_country,
+      committee: c.committee,
+      topic: c.topic,
+      special_role: c.special_role,
+      deadline: c.deadline,
     })
-    setSubmitting(false)
-    if (!created) { setError('Failed to create conference'); return }
-    setShowModal(false)
-    setForm({ name: '', assigned_country: '', committee: '', topic: '', special_role: '', deadline: '' })
-    navigate(`/conference/${created.id}`)
+    if (!created) setError('Failed to duplicate')
   }
 
   if (loading) {
@@ -225,10 +272,10 @@ export default function Dashboard() {
   }
 
   const modal = showModal && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowModal(false)}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setShowModal(false); setEditingId(null) }}>
       <div className="bg-canvas rounded-xl border border-hairline p-8 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-        <h2 className="font-serif text-[22px] font-[400] tracking-[-0.3px] text-ink mb-6">New Conference</h2>
-        <form onSubmit={handleCreate} className="space-y-4">
+        <h2 className="font-serif text-[22px] font-[400] tracking-[-0.3px] text-ink mb-6">{editingId ? 'Edit Conference' : 'New Conference'}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="conf-name" className="block text-sm font-[500] text-body mb-1">Name *</label>
             <input id="conf-name" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="input" placeholder="UNSC Session 2026" />
@@ -258,9 +305,9 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancel</button>
+            <button type="button" onClick={() => { setShowModal(false); setEditingId(null) }} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? 'Creating\u2026' : 'Create'}
+              {submitting ? 'Saving\u2026' : editingId ? 'Save Changes' : 'Create'}
             </button>
           </div>
         </form>
@@ -281,19 +328,32 @@ export default function Dashboard() {
       )}
 
       {conferences.length > 0 && (
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search conferences\u2026"
-            className="input pl-10"
-          />
+        <div className="flex gap-3 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search conferences\u2026"
+              className="input pl-10"
+            />
+          </div>
+          <select value={sort} onChange={e => setSort(e.target.value as any)} className="input w-44">
+            <option value="newest">Newest</option>
+            <option value="deadline">Deadline (soonest)</option>
+            <option value="name">Name A-Z</option>
+          </select>
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {sorted.length === 0 && !search && loading && (
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {sorted.length === 0 && !loading ? (
         <div className="text-center py-24">
           <div className="w-16 h-16 rounded-full bg-surface-card flex items-center justify-center mx-auto mb-4">
             <Globe className="w-8 h-8 text-muted" />
@@ -305,14 +365,14 @@ export default function Dashboard() {
             {search ? 'Try a different search term.' : 'Create your first conference to get started.'}
           </p>
           {!search && (
-            <button onClick={() => setShowModal(true)} className="btn-primary">
+            <button onClick={openNew} className="btn-primary">
               <Plus className="w-4 h-4" /> New Conference
             </button>
           )}
         </div>
-      ) : (
+      ) : !loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map(c => (
+          {sorted.map(c => (
             <div
               key={c.id}
               onClick={() => navigate(`/conference/${c.id}`)}
@@ -323,16 +383,24 @@ export default function Dashboard() {
                   <span className="font-serif text-[18px] font-[400] text-ink">{c.name}</span>
                 </div>
                 <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => deleteConference(c.id)} className="btn-ghost p-1 text-muted hover:text-error">
+                  <button onClick={() => openEdit(c)} className="btn-ghost p-1 text-muted hover:text-ink" title="Edit">
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleDuplicate(c)} className="btn-ghost p-1 text-muted hover:text-ink" title="Duplicate">
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => deleteConference(c.id)} className="btn-ghost p-1 text-muted hover:text-error" title="Delete">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <span className="badge bg-surface-card text-body">{c.committee || 'No committee'}</span>
-                {c.deadline && new Date(c.deadline) > new Date() && (
-                  <span className="badge bg-accent-amber/10 text-accent-amber">
-                    {Math.ceil((new Date(c.deadline).getTime() - Date.now()) / 86400000)} days
+                {c.deadline && (
+                  <span className={`badge ${new Date(c.deadline) > new Date() ? 'bg-accent-amber/10 text-accent-amber' : 'bg-error/10 text-error'}`}>
+                    {new Date(c.deadline) > new Date()
+                      ? `${Math.ceil((new Date(c.deadline).getTime() - Date.now()) / 86400000)} days`
+                      : 'Past due'}
                   </span>
                 )}
               </div>
@@ -340,7 +408,7 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {modal}
     </div>

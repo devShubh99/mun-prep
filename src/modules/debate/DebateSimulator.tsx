@@ -57,6 +57,14 @@ export default function DebateSimulator() {
 
   const currentLevel = DIFFICULTY_LEVELS.find(l => l.difficulty === difficulty)
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleAsk()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [conference, loading])
+
   const handleAsk = async () => {
     if (!conference || !currentLevel) return
     setLoading(true)

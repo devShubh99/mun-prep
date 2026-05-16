@@ -12,7 +12,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="sticky top-0 z-50 bg-canvas border-b border-hairline">
+      <header className="no-print sticky top-0 z-50 bg-canvas border-b border-hairline">
         <div className="max-w-content mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2 text-ink hover:text-primary transition-colors">

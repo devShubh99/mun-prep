@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateCheatSheet } from '../../lib/api'
 import { countryFlag } from '../../lib/countryFlags'
-import { Sparkles, Copy, Check, Printer } from 'lucide-react'
+import { Sparkles, Copy, Check, Printer, Download } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { CheatSheetJson } from '../../types'
@@ -120,8 +120,57 @@ export default function CheatSheet() {
 
   const regionData = alliesRegionData(cs.allies, cs.opponents)
 
+  const handleDownloadMd = () => {
+    const lines: string[] = []
+    lines.push(`# Cheat Sheet: ${conference?.assigned_country}`)
+    lines.push(`**Committee:** ${conference?.committee}  |  **Topic:** ${conference?.topic || 'N/A'}`)
+    lines.push('')
+    lines.push('## Mandate')
+    lines.push(cs.mandate)
+    lines.push('')
+    lines.push('## Core Demands')
+    cs.coreDemands.forEach((d, i) => lines.push(`${i + 1}. ${d}`))
+    lines.push('')
+    lines.push('## Red Lines')
+    cs.redLines.forEach(r => lines.push(`- ${r}`))
+    lines.push('')
+    lines.push('## Allies')
+    cs.allies.forEach(a => lines.push(`- ${a}`))
+    lines.push('')
+    lines.push('## Opponents')
+    cs.opponents.forEach(o => lines.push(`- ${o}`))
+    lines.push('')
+    lines.push('## Voting Record')
+    lines.push(cs.votingRecord)
+    lines.push('')
+    lines.push('## Draft Clauses')
+    cs.draftClauses.forEach((c, i) => lines.push(`${i + 1}. ${c}`))
+    lines.push('')
+    lines.push('## Key Arguments')
+    cs.keyArguments.forEach((a, i) => lines.push(`${i + 1}. ${a}`))
+    lines.push('')
+    lines.push('## Bilateral Relations')
+    lines.push(cs.bilateralRelations)
+    lines.push('')
+    lines.push('## Strategy Notes')
+    lines.push(cs.strategyNotes)
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `cheatsheet-${conference?.assigned_country?.replace(/\s+/g, '-')}.md`
+    a.click(); URL.revokeObjectURL(url)
+  }
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleGenerate()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [conference, generating])
+
   return (
-    <div ref={printRef}>
+    <div ref={printRef} className="cheat-sheet-print">
       {stale && (
         <div className="text-sm text-warning bg-warning/10 rounded-lg px-3 py-2 mb-4">
           Conference details changed since this cheat sheet was generated.{' '}
@@ -146,6 +195,9 @@ export default function CheatSheet() {
             </div>
           </div>
           <div className="flex gap-2 no-print">
+            <button onClick={handleDownloadMd} className="btn-ghost text-xs" title="Download as Markdown">
+              <Download className="w-3.5 h-3.5" /> Md
+            </button>
             <button onClick={() => window.print()} className="btn-ghost text-xs">
               <Printer className="w-3.5 h-3.5" /> Print
             </button>

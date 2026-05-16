@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateResearch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
@@ -12,6 +12,14 @@ export default function ResearchTab() {
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleGenerate()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [conference, generating])
 
   const handleGenerate = async () => {
     if (!conference) return

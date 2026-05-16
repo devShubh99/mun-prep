@@ -4,12 +4,22 @@ import { supabase } from '../../lib/supabase'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import RichTextEditor from './RichTextEditor'
 import AiActionButtons from './AiActionButtons'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Archive, RotateCcw } from 'lucide-react'
 import type { Document } from '../../types'
+
+function wordCount(content: string): number {
+  try {
+    const json = JSON.parse(content)
+    const text = JSON.stringify(json).replace(/<[^>]*>/g, '').replace(/[{}"\[\]\\]/g, ' ').trim()
+    return text.split(/\s+/).filter(Boolean).length
+  } catch { return 0 }
+}
 
 export default function DocumentWorkshop() {
   const { conference } = useConference()
   const [docs, setDocs] = useState<Document[]>([])
+  const [archivedDocs, setArchivedDocs] = useState<Document[]>([])
+  const [showArchived, setShowArchived] = useState(false)
   const [activeDocId, setActiveDocId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -34,6 +44,19 @@ export default function DocumentWorkshop() {
         }
       })
   }, [conference?.id])
+
+  useEffect(() => {
+    if (!conference || !showArchived) return
+    supabase
+      .from('documents')
+      .select('*')
+      .eq('conference_id', conference.id)
+      .eq('archived', true)
+      .order('created_at', { ascending: false })
+      .then(({ data, error: err }) => {
+        if (!err && data) setArchivedDocs(data as Document[])
+      })
+  }, [conference?.id, showArchived])
 
   const saveDocument = useCallback(async () => {
     if (!activeDoc) return
@@ -72,6 +95,20 @@ export default function DocumentWorkshop() {
       const remaining = docs.filter(d => d.id !== id)
       setActiveDocId(remaining.length > 0 ? remaining[0].id : null)
     }
+  }
+
+  const handleRestore = async (id: string) => {
+    setError(null)
+    const { error: err } = await supabase.from('documents').update({ archived: false }).eq('id', id)
+    if (err) { setError(err.message); return }
+    setArchivedDocs(prev => prev.filter(d => d.id !== id))
+    supabase
+      .from('documents')
+      .select('*')
+      .eq('conference_id', conference?.id)
+      .eq('archived', false)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => { if (data) setDocs(data as Document[]) })
   }
 
   const handleRename = async (id: string, title: string) => {
@@ -117,8 +154,10 @@ export default function DocumentWorkshop() {
             ) : (
               <span
                 onDoubleClick={() => { setRenamingId(doc.id); setRenameValue(doc.title) }}
+                className="flex items-center gap-1"
               >
                 {doc.title}
+                {doc.content && <span className="text-xs text-muted-soft font-[400]">({wordCount(doc.content)}w)</span>}
               </span>
             )}
             <button
@@ -132,7 +171,31 @@ export default function DocumentWorkshop() {
         <button onClick={handleCreate} className="p-3 text-muted hover:text-ink">
           <Plus className="w-4 h-4" />
         </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={`btn-ghost text-xs flex items-center gap-1 ${showArchived ? 'text-primary' : ''}`}
+          >
+            <Archive className="w-3.5 h-3.5" /> Archived
+          </button>
+        </div>
       </div>
+
+      {showArchived && archivedDocs.length > 0 && (
+        <div className="mb-4 p-3 bg-surface-soft/50 rounded-xl">
+          <h4 className="text-xs font-[500] text-muted mb-2">Archived Documents</h4>
+          <div className="space-y-1">
+            {archivedDocs.map(doc => (
+              <div key={doc.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-surface-soft transition-colors">
+                <span className="text-sm text-muted italic">{doc.title}</span>
+                <button onClick={() => handleRestore(doc.id)} className="btn-ghost text-xs flex items-center gap-1">
+                  <RotateCcw className="w-3 h-3" /> Restore
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {activeDoc ? (
         <div>
