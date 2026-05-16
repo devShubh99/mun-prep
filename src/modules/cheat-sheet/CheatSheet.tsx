@@ -29,6 +29,8 @@ function CopyBtn({ text }: { text: string }) {
   )
 }
 
+function stripDesc(s: string) { return s.replace(/ *\(.*?\)/g, '').trim() }
+
 function alliesRegionData(allies: string[], opponents: string[]) {
   const regionMap: Record<string, { allies: number; opponents: number }> = {
     'Europe': { allies: 0, opponents: 0 },
@@ -56,8 +58,8 @@ function alliesRegionData(allies: string[], opponents: string[]) {
     return 'Europe'
   }
 
-  allies.forEach(a => { const r = categorize(a); if (regionMap[r]) regionMap[r].allies++ })
-  opponents.forEach(o => { const r = categorize(o); if (regionMap[r]) regionMap[r].opponents++ })
+  allies.forEach(a => { const r = categorize(stripDesc(a)); if (regionMap[r]) regionMap[r].allies++ })
+  opponents.forEach(o => { const r = categorize(stripDesc(o)); if (regionMap[r]) regionMap[r].opponents++ })
 
   return Object.entries(regionMap).map(([region, v]) => ({ region, allies: v.allies, opponents: v.opponents }))
 }
@@ -225,23 +227,29 @@ export default function CheatSheet() {
               <div className="rounded-xl px-4 py-3 bg-success/5 border-l-4 border-l-success">
                 <h3 className="text-sm font-[500] text-success mb-3">Allies</h3>
                 <ul className="space-y-1.5">
-                  {cs.allies.map((a, i) => (
-                    <li key={i} className="text-sm text-body flex items-center gap-2">
-                      <span>{countryFlag(a)}</span>
-                      <span>{a}</span>
-                    </li>
-                  ))}
+                  {cs.allies.map((a, i) => {
+                    const name = stripDesc(a)
+                    return (
+                      <li key={i} className="text-sm text-body flex items-center gap-2">
+                        <span>{countryFlag(name)}</span>
+                        <span>{name}</span>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
               <div className="rounded-xl px-4 py-3 bg-error/5 border-l-4 border-l-error">
                 <h3 className="text-sm font-[500] text-error mb-3">Opponents</h3>
                 <ul className="space-y-1.5">
-                  {cs.opponents.map((o, i) => (
-                    <li key={i} className="text-sm text-body flex items-center gap-2">
-                      <span>{countryFlag(o)}</span>
-                      <span>{o}</span>
-                    </li>
-                  ))}
+                  {cs.opponents.map((o, i) => {
+                    const name = stripDesc(o)
+                    return (
+                      <li key={i} className="text-sm text-body flex items-center gap-2">
+                        <span>{countryFlag(name)}</span>
+                        <span>{name}</span>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             </div>
