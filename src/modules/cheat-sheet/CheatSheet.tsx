@@ -253,6 +253,12 @@ export default function CheatSheet() {
               </div>
             </div>
 
+            {cs.opponentNotes && (
+              <div className="text-sm text-muted bg-surface-soft/50 rounded-xl px-4 py-3 mb-4 leading-relaxed">
+                {cs.opponentNotes}
+              </div>
+            )}
+
             {regionData.some(d => d.allies > 0 || d.opponents > 0) && (
               <div className="card-light no-print">
                 <h3 className="text-sm font-[500] text-muted mb-3">By Region</h3>

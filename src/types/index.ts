@@ -21,6 +21,7 @@ export interface CheatSheetJson {
   keyArguments: string[]
   allies: string[]
   opponents: string[]
+  opponentNotes?: string
   votingRecord: string
   draftClauses: string[]
   bilateralRelations: string
