@@ -4,6 +4,7 @@ import { generateResearch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import ResearchChat from './ResearchChat'
 import { Sparkles, Copy } from 'lucide-react'
+import { ProgressBar } from '../../components/ProgressIndicator'
 import DOMPurify from 'dompurify'
 
 export default function ResearchTab() {
@@ -72,6 +73,7 @@ export default function ResearchTab() {
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}
+      {generating && <div className="mb-4"><ProgressBar /></div>}
       {!researchContent ? (
         <div className="card text-center">
           <p className="text-body mb-4">

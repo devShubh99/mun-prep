@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { documentAi } from '../../lib/api'
 import { Sparkles, Scissors, Lightbulb, FilePlus } from 'lucide-react'
+import { ProgressBar } from '../../components/ProgressIndicator'
 
 interface Props {
   content: string
@@ -50,6 +51,7 @@ export default function AiActionButtons({ content, documentType, onResult }: Pro
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-2">{error}</div>
       )}
+      {loadingAction && <div className="mb-2"><ProgressBar /></div>}
       <div className="flex gap-2">
       {ACTIONS.map(action => (
         <button

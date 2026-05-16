@@ -37,6 +37,18 @@
   }
 }
 
+@keyframes progress-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.animate-progress { animation: progress-sweep 1.5s ease-in-out infinite; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+.animate-dot { animation: dot-bounce 1.4s ease-in-out infinite; }
+
 @media print {
   .no-print {
     display: none !important;

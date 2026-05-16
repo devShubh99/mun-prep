@@ -3,6 +3,7 @@ import { useConference } from '../../hooks/useConference'
 import { generateCheatSheet } from '../../lib/api'
 import { countryFlag } from '../../lib/countryFlags'
 import { Sparkles, Copy, Check, Printer } from 'lucide-react'
+import { ProgressBar } from '../../components/ProgressIndicator'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { CheatSheetJson } from '../../types'
 
@@ -103,6 +104,7 @@ export default function CheatSheet() {
     return (
       <div>
         {error && <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>}
+        {generating && <div className="mb-4"><ProgressBar /></div>}
         <div className="card text-center py-16">
           <span className="text-5xl mb-4 block">{conference?.assigned_country ? countryFlag(conference.assigned_country) : '\uD83C\uDF10'}</span>
           <h2 className="font-serif text-[28px] font-[400] text-ink mb-2">{conference?.assigned_country || 'No country selected'}</h2>
@@ -127,6 +129,7 @@ export default function CheatSheet() {
         </div>
       )}
       {error && <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>}
+      {generating && <div className="mb-4"><ProgressBar /></div>}
 
       {/* Hero */}
       <div className="card-light mb-6 print:mb-4">
