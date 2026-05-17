@@ -33,7 +33,11 @@ interface Change {
   originalText: string
   newText: string
   status: 'pending' | 'accepted' | 'rejected'
+  insertAfterIndex?: number
+  selectionRange?: { startPara: number; endPara: number } | null
 }
+
+interface SelectionInfo { text: string; startPara: number; endPara: number }
 
 export default function DocumentWorkshop() {
   const { conference } = useConference()
@@ -49,10 +53,25 @@ export default function DocumentWorkshop() {
   const [reviewMode, setReviewMode] = useState(false)
   const [reviewContent, setReviewContent] = useState<string | null>(null)
   const [activeChangeIdx, setActiveChangeIdx] = useState(0)
+  const [selectionInfo, setSelectionInfo] = useState<SelectionInfo | null>(null)
+  const [cursorPara, setCursorPara] = useState(-1)
 
   const activeDoc = docs.find(d => d.id === activeDocId)
 
-  const buildChanges = (originalJson: string, resultText: string, action: string): Change[] => {
+  const effectiveContent = selectionInfo?.text ?? activeDoc?.content ?? ''
+
+  const isActionDisabled = (() => {
+    const text = selectionInfo ? selectionInfo.text.trim() : (() => {
+      try {
+        const doc = JSON.parse(activeDoc?.content || '{}')
+        if (!doc.content) return ''
+        return doc.content.map((n: any) => n.content?.map((c: any) => c.text || '').join('')).join('').trim()
+      } catch { return '' }
+    })()
+    return text.length < 3
+  })()
+
+  const buildChanges = (originalJson: string, resultText: string, action: string, insertAt?: number): Change[] => {
     const originals = extractTextFromDoc(originalJson)
     const results = resultText.split('\n').filter(t => t.trim())
 
@@ -64,25 +83,41 @@ export default function DocumentWorkshop() {
         const suggested = results[i] || ''
         if (orig.toLowerCase().trim() === suggested.toLowerCase().trim()) continue
         if (!orig && !suggested) continue
-        items.push({ id: i, type: 'changed', originalText: orig, newText: suggested, status: 'pending' })
+        items.push({ id: i, type: 'changed', originalText: orig, newText: suggested, status: 'pending', selectionRange: selectionInfo ? { startPara: selectionInfo.startPara, endPara: selectionInfo.endPara } : null })
       }
       return items
     }
 
-    return [{ id: 0, type: 'added', originalText: '', newText: resultText, status: 'pending' }]
+    return [{ id: 0, type: 'added', originalText: '', newText: resultText, status: 'pending', insertAfterIndex: insertAt }]
   }
 
   const getOriginalDoc = () => {
     try { return JSON.parse(activeDoc?.content || '{}') } catch { return { type: 'doc', content: [] } }
   }
 
+  const finalizeReview = (updated: Change[]) => {
+    if (!activeDocId || !activeDoc) return
+    const original = getOriginalDoc()
+    const result = applyChanges(original, updated, selectionInfo)
+    handleContentChange(JSON.stringify(result))
+    setReviewMode(false)
+    setChanges([])
+    setReviewContent(null)
+    setSelectionInfo(null)
+  }
+
+  const tryFinishReview = (updated: Change[]) => {
+    if (!updated.some(c => c.status === 'pending')) {
+      finalizeReview(updated)
+    }
+  }
+
   const handleAiResult = (resultText: string, action: string) => {
-    const built = buildChanges(activeDoc?.content || '{}', resultText, action)
+    const built = buildChanges(effectiveContent || activeDoc?.content || '{}', resultText, action, cursorPara >= 0 ? cursorPara : undefined)
     if (built.length === 0) { setError('AI returned no changes.'); return }
     setChanges(built)
     setActiveChangeIdx(0)
     setReviewMode(true)
-    // Build the review content with marks applied
     const original = getOriginalDoc()
     const reviewDoc = buildReviewContent(original, built)
     setReviewContent(JSON.stringify(reviewDoc))
@@ -94,6 +129,7 @@ export default function DocumentWorkshop() {
       const original = getOriginalDoc()
       const reviewDoc = buildReviewContent(original, updated)
       setReviewContent(JSON.stringify(reviewDoc))
+      tryFinishReview(updated)
       return updated
     })
   }
@@ -103,6 +139,7 @@ export default function DocumentWorkshop() {
       const updated = prev.map(c => c.status === 'pending' ? { ...c, status: 'accepted' as const } : c)
       const original = getOriginalDoc()
       setReviewContent(JSON.stringify(buildReviewContent(original, updated)))
+      tryFinishReview(updated)
       return updated
     })
   }
@@ -112,18 +149,9 @@ export default function DocumentWorkshop() {
       const updated = prev.map(c => c.status === 'pending' ? { ...c, status: 'rejected' as const } : c)
       const original = getOriginalDoc()
       setReviewContent(JSON.stringify(buildReviewContent(original, updated)))
+      tryFinishReview(updated)
       return updated
     })
-  }
-
-  const handleExitReview = () => {
-    if (!activeDocId || !activeDoc) return
-    const original = getOriginalDoc()
-    const result = applyChanges(original, changes)
-    handleContentChange(JSON.stringify(result))
-    setReviewMode(false)
-    setChanges([])
-    setReviewContent(null)
   }
 
   const handleSelectChange = (id: number) => {
@@ -237,15 +265,6 @@ export default function DocumentWorkshop() {
     setDocs(prev => prev.map(d => d.id === activeDocId ? { ...d, content } : d))
   }
 
-  const isDocEmpty = (() => {
-    try {
-      const doc = JSON.parse(activeDoc?.content || '{}')
-      if (!doc.content || doc.content.length === 0) return true
-      const text = doc.content.map((n: any) => n.content?.map((c: any) => c.text || '').join('')).join('').trim()
-      return text.length < 3
-    } catch { return true }
-  })()
-
   return (
     <div>
       {error && (
@@ -327,10 +346,10 @@ export default function DocumentWorkshop() {
       {activeDoc && !reviewMode && (
         <div>
           <AiActionButtons
-            content={activeDoc.content}
+            content={effectiveContent}
             documentType="general"
             onPreview={handleAiResult}
-            disabled={isDocEmpty}
+            disabled={isActionDisabled}
           />
           <div className="mt-4">
             <RichTextEditor
@@ -338,6 +357,8 @@ export default function DocumentWorkshop() {
               onChange={handleContentChange}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
+              onSelection={setSelectionInfo}
+              onCursorParagraph={setCursorPara}
             />
           </div>
         </div>
@@ -358,7 +379,6 @@ export default function DocumentWorkshop() {
             onAcceptAll={acceptAll}
             onRejectAll={rejectAll}
             onSelectChange={handleSelectChange}
-            onExitReview={handleExitReview}
           />
         </div>
       )}

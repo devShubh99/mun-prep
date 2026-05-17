@@ -28,7 +28,7 @@ export const SuggestionDelete = Mark.create({
 
 export function buildReviewContent(
   originalDoc: any,
-  changes: { id: number; type: 'changed' | 'added'; originalText: string; newText: string; status: 'pending' | 'accepted' | 'rejected' }[]
+  changes: { id: number; type: 'changed' | 'added'; originalText: string; newText: string; status: 'pending' | 'accepted' | 'rejected'; insertAfterIndex?: number }[]
 ): any {
   if (!originalDoc?.content) return originalDoc
 
@@ -37,7 +37,10 @@ export function buildReviewContent(
   for (const change of changes) {
     if (change.status === 'rejected') continue
     if (change.type === 'added') {
-      doc.content.push({
+      const insertAt = change.insertAfterIndex !== undefined
+        ? Math.min(change.insertAfterIndex + 1, doc.content.length)
+        : doc.content.length
+      doc.content.splice(insertAt, 0, {
         type: 'paragraph',
         attrs: { 'data-change-id': String(change.id) },
         content: [{ type: 'text', marks: [{ type: 'suggestionInsert', attrs: { changeId: String(change.id) } }], text: change.newText }],
@@ -78,23 +81,33 @@ export function buildReviewContent(
 
 export function applyChanges(
   originalDoc: any,
-  changes: { id: number; type: 'changed' | 'added'; originalText: string; newText: string; status: 'pending' | 'accepted' | 'rejected' }[]
+  changes: { id: number; type: 'changed' | 'added'; originalText: string; newText: string; status: 'pending' | 'accepted' | 'rejected'; insertAfterIndex?: number }[],
+  selectionRange?: { startPara: number; endPara: number } | null
 ): any {
   if (!originalDoc?.content) return originalDoc
   const doc = JSON.parse(JSON.stringify(originalDoc))
 
   for (const change of changes) {
-    if (change.status === 'accepted') {
-      if (change.type === 'added') {
-        doc.content.push({
-          type: 'paragraph',
-          content: [{ type: 'text', text: change.newText }],
-        })
-      } else {
-        doc.content[change.id] = {
-          type: 'paragraph',
-          content: [{ type: 'text', text: change.newText || change.originalText }],
-        }
+    if (change.status !== 'accepted') continue
+
+    if (change.type === 'added') {
+      const insertAt = change.insertAfterIndex !== undefined
+        ? Math.min(change.insertAfterIndex + 1, doc.content.length)
+        : doc.content.length
+      doc.content.splice(insertAt, 0, {
+        type: 'paragraph',
+        content: [{ type: 'text', text: change.newText }],
+      })
+    } else if (selectionRange) {
+      const count = selectionRange.endPara - selectionRange.startPara + 1
+      doc.content.splice(selectionRange.startPara, count, {
+        type: 'paragraph',
+        content: [{ type: 'text', text: change.newText }],
+      })
+    } else {
+      doc.content[change.id] = {
+        type: 'paragraph',
+        content: [{ type: 'text', text: change.newText || change.originalText }],
       }
     }
   }

@@ -14,6 +14,8 @@ interface DiffChange {
   status: 'pending' | 'accepted' | 'rejected'
 }
 
+interface SelectionInfo { text: string; startPara: number; endPara: number }
+
 interface Props {
   content: string
   onChange: (content: string) => void
@@ -27,10 +29,11 @@ interface Props {
   onAcceptAll?: () => void
   onRejectAll?: () => void
   onSelectChange?: (changeId: number) => void
-  onExitReview?: () => void
+  onSelection?: (info: SelectionInfo | null) => void
+  onCursorParagraph?: (idx: number) => void
 }
 
-export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, reviewMode, changes, activeChangeIdx, onAcceptChange, onRejectChange, onAcceptAll, onRejectAll, onSelectChange, onExitReview }: Props) {
+export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, reviewMode, changes, activeChangeIdx, onAcceptChange, onRejectChange, onAcceptAll, onRejectAll, onSelectChange, onSelection, onCursorParagraph }: Props) {
   const contentRef = useRef(content);
 
   const editor = useEditor({
@@ -51,20 +54,45 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
       onChange(json);
     },
     onSelectionUpdate: ({ editor: ed }) => {
-      if (!reviewMode || !onSelectChange) return
-      let foundId: number | null = null
-      ed.state.doc.nodesBetween(0, ed.state.doc.content.size, (node) => {
-        if (foundId !== null) return false
-        if (!node.marks) return
-        for (const mark of node.marks) {
-          const id = mark.attrs?.changeId
-          if (id !== null && id !== undefined) {
-            foundId = Number(id)
-            return false
+      // Review mode: detect which change the cursor is in
+      if (reviewMode && onSelectChange) {
+        let foundId: number | null = null
+        ed.state.doc.nodesBetween(0, ed.state.doc.content.size, (node) => {
+          if (foundId !== null) return false
+          if (!node.marks) return
+          for (const mark of node.marks) {
+            const id = mark.attrs?.changeId
+            if (id !== null && id !== undefined) {
+              foundId = Number(id)
+              return false
+            }
           }
+        })
+        if (foundId !== null) onSelectChange(foundId)
+      }
+
+      // Normal mode: track selection and cursor position
+      if (!reviewMode) {
+        const cursorIdx = ed.state.selection.empty
+          ? ed.state.doc.resolve(ed.state.selection.anchor).index()
+          : -1
+        onCursorParagraph?.(cursorIdx)
+
+        if (onSelection && !ed.state.selection.empty) {
+          const text = ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to).trim()
+          if (text.length >= 3) {
+            onSelection({
+              text,
+              startPara: ed.state.doc.resolve(ed.state.selection.from).index(),
+              endPara: ed.state.doc.resolve(ed.state.selection.to).index(),
+            })
+          } else {
+            onSelection(null)
+          }
+        } else if (onSelection) {
+          onSelection(null)
         }
-      })
-      if (foundId !== null) onSelectChange(foundId)
+      }
     },
   });
 
@@ -153,10 +181,6 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
                 <button onClick={onAcceptAll} className="btn-ghost text-xs text-success">Accept All Pending</button>
               </>
             )}
-            <span className="w-px h-4 bg-hairline mx-1" />
-            <button onClick={onExitReview} className="btn-ghost text-xs text-muted" title="Apply accepted and exit">
-              Finish Review
-            </button>
           </div>
         </div>
       )}
