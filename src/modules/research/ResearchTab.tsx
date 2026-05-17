@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateResearch } from '../../lib/api'
-import { supabase } from '../../lib/supabase'
 import ResearchChat from './ResearchChat'
 import { countryFlag } from '../../lib/countryFlags'
 import { Search, Copy, Check, Printer, Download, MessageSquare, X, ChevronRight, Users, DollarSign, TrendingDown, BarChart, Landmark, Globe, Shield, BookOpen, ScrollText, Swords, Target, Ban, MessageCircle, Lightbulb, Handshake, ExternalLink } from 'lucide-react'
@@ -39,9 +38,7 @@ function SectionIcon({ title }: { title: string }) {
 function ConfidenceBar({ confidence }: { confidence?: string }) {
   if (!confidence) return null
   const colors = { high: 'bg-success', medium: 'bg-accent-amber', low: 'bg-error' }
-  const labels = { high: 'Well sourced', medium: 'Partially sourced', low: 'Inferred' }
   const color = colors[confidence as keyof typeof colors] || 'bg-hairline'
-  const label = labels[confidence as keyof typeof labels] || 'Unknown'
   return <div className="h-[3px] w-full rounded-t-xl overflow-hidden"><div className={`h-full ${color} rounded-t-xl`} style={{ width: confidence === 'high' ? '100%' : confidence === 'medium' ? '60%' : '30%' }} /></div>
 }
 
@@ -109,16 +106,6 @@ export default function ResearchTab() {
     const blob = new Blob([`# Research Briefing: ${conference?.assigned_country}\n${allText}`], { type: 'text/markdown' })
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `research-${conference?.assigned_country?.replace(/\s+/g, '-')}.md`; a.click()
   }
-  const handleCopyToDocuments = async () => {
-    if (!conference) return
-    const { error: err } = await supabase.from('documents').insert({
-      conference_id: conference.id, archived: false,
-      title: `Research \u2013 ${conference.assigned_country} \u2013 ${conference.topic}`,
-      content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: allText }] }] }),
-    })
-    if (err) setError(err.message)
-  }
-
   if (!sections) {
     return (
       <div>
@@ -133,7 +120,7 @@ export default function ResearchTab() {
     )
   }
 
-  const steps = sections.map((s: ResearchSection, i: number) => {
+  const steps = sections.map((s: ResearchSection) => {
     const t = s.title
     if (t.toLowerCase().includes('country')) return 'Country'
     if (t.toLowerCase().includes('foreign') || t.toLowerCase().includes('policy')) return 'Foreign Policy'
