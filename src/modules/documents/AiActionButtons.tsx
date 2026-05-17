@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { documentAi } from '../../lib/api'
-import { Sparkles, Scissors, Lightbulb, FilePlus } from 'lucide-react'
+import { useConference } from '../../hooks/useConference'
+import { Wand2, Scissors, Lightbulb, FilePlus } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
 
 interface Props {
@@ -11,19 +12,28 @@ interface Props {
 }
 
 const ACTIONS = [
-  { key: 'polish', label: 'Polish', icon: Sparkles },
-  { key: 'shorten', label: 'Shorten', icon: Scissors },
+  { key: 'polish', label: 'Polish Wording', icon: Wand2 },
+  { key: 'shorten', label: 'Condense', icon: Scissors },
   { key: 'brainstorm', label: 'Brainstorm', icon: Lightbulb },
-  { key: 'insert-clause', label: 'Insert Clause', icon: FilePlus },
+  { key: 'insert-clause', label: 'Draft Clause', icon: FilePlus },
 ]
 
 export default function AiActionButtons({ content, documentType, onPreview, disabled }: Props) {
+  const { tasks, setTask } = useConference()
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const actionLabels: Record<string, string> = {
+    polish: 'Polishing\u2026',
+    shorten: 'Condensing\u2026',
+    brainstorm: 'Brainstorming\u2026',
+    'insert-clause': 'Drafting\u2026',
+  }
 
   const handleAction = async (action: string) => {
     setLoadingAction(action)
     setError(null)
+    setTask('documents', actionLabels[action] || 'Processing\u2026')
     try {
       const { result } = await documentAi({ action, documentType, content })
       if (!result) throw new Error('AI returned empty response')
@@ -32,6 +42,7 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
       setError(e?.message || 'Action failed')
     } finally {
       setLoadingAction(null)
+      setTask('documents', null)
     }
   }
 
@@ -40,7 +51,7 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-2">{error}</div>
       )}
-      {loadingAction && <div className="mb-2"><ProgressBar /></div>}
+      {(loadingAction || tasks['documents']) && <div className="mb-2"><ProgressBar /></div>}
       <div className="flex gap-2">
       {ACTIONS.map(action => (
         <button

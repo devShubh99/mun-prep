@@ -3,12 +3,12 @@ import { useConference } from '../../hooks/useConference'
 import { generateResearch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import ResearchChat from './ResearchChat'
-import { Sparkles, Copy } from 'lucide-react'
+import { Search, Copy } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
 import DOMPurify from 'dompurify'
 
 export default function ResearchTab() {
-  const { conference, updateConference } = useConference()
+  const { conference, updateConference, tasks, setTask } = useConference()
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +25,7 @@ export default function ResearchTab() {
     if (!conference) return
     setGenerating(true)
     setError(null)
+    setTask('research', 'Researching…')
     try {
       const data = await generateResearch({
         country: conference.assigned_country,
@@ -42,6 +43,7 @@ export default function ResearchTab() {
       setError(e?.message || 'Failed to generate research')
     } finally {
       setGenerating(false)
+      setTask('research', null)
     }
   }
 
@@ -81,15 +83,15 @@ export default function ResearchTab() {
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}
-      {generating && <div className="mb-4"><ProgressBar /></div>}
+      {(generating || tasks['research']) && <div className="mb-4"><ProgressBar /></div>}
       {!researchContent ? (
         <div className="card text-center">
           <p className="text-body mb-4">
             Generate a comprehensive research briefing for {conference?.assigned_country} on {conference?.topic}.
           </p>
           <button onClick={handleGenerate} disabled={generating} className="btn-primary">
-            <Sparkles className="w-4 h-4" />
-            {generating ? 'Generating…' : 'Generate Research'}
+            <Search className="w-4 h-4" />
+            {generating ? 'Researching\u2026' : 'Research Topic'}
           </button>
         </div>
       ) : (
@@ -104,8 +106,8 @@ export default function ResearchTab() {
                 {copied ? 'Copied!' : 'Copy to Documents'}
               </button>
               <button onClick={handleGenerate} disabled={generating} className="btn-ghost">
-                <Sparkles className="w-3 h-3" />
-                Regenerate
+                <Search className="w-3 h-3" />
+                Re-research
               </button>
             </div>
           </div>

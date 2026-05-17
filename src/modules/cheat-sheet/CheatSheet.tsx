@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateCheatSheet } from '../../lib/api'
 import { countryFlag } from '../../lib/countryFlags'
-import { Sparkles, Copy, Check, Printer, Download } from 'lucide-react'
+import { BookOpen, Copy, Check, Printer, Download } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { CheatSheetJson } from '../../types'
@@ -65,7 +65,7 @@ function alliesRegionData(allies: string[], opponents: string[]) {
 }
 
 export default function CheatSheet() {
-  const { conference, updateConference } = useConference()
+  const { conference, updateConference, tasks, setTask } = useConference()
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -78,6 +78,7 @@ export default function CheatSheet() {
     if (!conference) return
     setGenerating(true)
     setError(null)
+    setTask('cheat-sheet', 'Researching…')
     try {
       const data = await generateCheatSheet({
         country: conference.assigned_country,
@@ -93,6 +94,7 @@ export default function CheatSheet() {
       setError(e?.message || 'Failed to generate cheat sheet')
     } finally {
       setGenerating(false)
+      setTask('cheat-sheet', null)
     }
   }
 
@@ -104,14 +106,14 @@ export default function CheatSheet() {
     return (
       <div>
         {error && <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>}
-        {generating && <div className="mb-4"><ProgressBar /></div>}
+      {(generating || tasks['cheat-sheet']) && <div className="mb-4"><ProgressBar /></div>}
         <div className="card text-center py-16">
           <span className="text-5xl mb-4 block">{conference?.assigned_country ? countryFlag(conference.assigned_country) : '\uD83C\uDF10'}</span>
           <h2 className="font-serif text-[28px] font-[400] text-ink mb-2">{conference?.assigned_country || 'No country selected'}</h2>
           <p className="text-muted mb-6 max-w-md mx-auto">Generate an AI-powered cheat sheet to prepare for your committee.</p>
           <button onClick={handleGenerate} disabled={generating} className="btn-primary text-base px-6 py-3">
-            <Sparkles className="w-5 h-5" />
-            {generating ? 'Generating…' : 'Generate Cheat Sheet'}
+            <BookOpen className="w-5 h-5" />
+            {generating ? 'Researching\u2026' : 'Research Briefing'}
           </button>
         </div>
       </div>
@@ -178,7 +180,7 @@ export default function CheatSheet() {
         </div>
       )}
       {error && <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>}
-      {generating && <div className="mb-4"><ProgressBar /></div>}
+      {(generating || tasks['cheat-sheet']) && <div className="mb-4"><ProgressBar /></div>}
 
       {/* Hero */}
       <div className="card-light mb-6 print:mb-4">
@@ -202,7 +204,7 @@ export default function CheatSheet() {
               <Printer className="w-3.5 h-3.5" /> Print
             </button>
             <button onClick={handleGenerate} disabled={generating} className="btn-ghost text-xs">
-              <Sparkles className="w-3.5 h-3.5" /> Regenerate
+              <BookOpen className="w-3.5 h-3.5" /> Refresh
             </button>
           </div>
         </div>

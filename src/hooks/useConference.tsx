@@ -18,6 +18,8 @@ interface ConferenceContextValue {
   deleteConference: (id: string) => Promise<string | null>
   setActiveConferenceId: (id: string | null) => void
   activeConferenceId: string | null
+  tasks: Record<string, string | null>
+  setTask: (key: string, label: string | null) => void
 }
 
 const ConferenceContext = createContext<ConferenceContextValue | null>(null)
@@ -29,6 +31,10 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [conferenceError, setConferenceError] = useState<string | null>(null)
   const [activeConferenceId, setActiveConferenceId] = useState<string | null>(null)
+  const [tasks, setTasks] = useState<Record<string, string | null>>({})
+  const setTask = useCallback((key: string, label: string | null) => {
+    setTasks(prev => ({ ...prev, [key]: label }))
+  }, [])
 
   const fetchConferences = useCallback(async () => {
     if (!user) {
@@ -119,10 +125,11 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     updateConference, createConference, archiveConference, restoreConference,
     permanentlyDeleteConference, deleteConference,
     setActiveConferenceId, activeConferenceId,
+    tasks, setTask,
   }), [conference, loading, conferenceError, conferences, archivedConferences,
       fetchConferences, updateConference, createConference,
       archiveConference, restoreConference, permanentlyDeleteConference,
-      deleteConference, activeConferenceId])
+      deleteConference, activeConferenceId, tasks, setTask])
 
   return (
     <ConferenceContext.Provider value={value}>

@@ -5,7 +5,7 @@ import { generateQuestion, evaluateAnswer } from '../../lib/api'
 import QuestionDisplay from './QuestionDisplay'
 import FeedbackDisplay from './FeedbackDisplay'
 import { ProgressBar } from '../../components/ProgressIndicator'
-import { Copy, Check, ChevronDown, ChevronRight, Archive, RotateCcw, Trash2 } from 'lucide-react'
+import { Copy, Check, ChevronDown, ChevronRight, Archive, RotateCcw, Trash2, MessageSquare } from 'lucide-react'
 
 import type { DebateQA, DebateFeedback } from '../../types'
 
@@ -31,7 +31,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 export default function DebateSimulator() {
-  const { conference } = useConference()
+  const { conference, setTask } = useConference()
   const [difficulty, setDifficulty] = useState('easy')
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
   const [answer, setAnswer] = useState('')
@@ -75,6 +75,7 @@ export default function DebateSimulator() {
     setSubmittedAnswers(new Set())
     setLoading(true)
     setError(null)
+    setTask('debate', 'Posing question\u2026')
     try {
       const { question } = await generateQuestion({
         country: conference.assigned_country,
@@ -90,6 +91,7 @@ export default function DebateSimulator() {
       setError(e?.message || 'Failed to generate question')
     } finally {
       setLoading(false)
+      setTask('debate', null)
     }
   }
 
@@ -102,6 +104,7 @@ export default function DebateSimulator() {
     }
     setLoading(true)
     setError(null)
+    setTask('debate', 'Scoring\u2026')
     try {
       const evaluation = await evaluateAnswer({
         question: currentQuestion,
@@ -137,6 +140,7 @@ export default function DebateSimulator() {
       setError(e?.message || 'Failed to evaluate answer')
     } finally {
       setLoading(false)
+      setTask('debate', null)
     }
   }
 
@@ -198,7 +202,8 @@ export default function DebateSimulator() {
           {DIFFICULTY_LEVELS.map(l => <option key={l.difficulty} value={l.difficulty}>{l.label}</option>)}
         </select>
         <button onClick={handleAsk} disabled={loading} className="btn-primary">
-          {loading ? 'Generating\u2026' : 'Ask Question'}
+          <MessageSquare className="w-4 h-4" />
+          {loading ? 'Posing question\u2026' : 'Ask Question'}
         </button>
       </div>
 

@@ -21,7 +21,7 @@ function CopyMsg({ text }: { text: string }) {
 }
 
 export default function ResearchChat() {
-  const { conference } = useConference()
+  const { conference, setTask } = useConference()
   const { user } = useAuth()
   const [messages, setMessages] = useState<ResearchChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -62,6 +62,7 @@ export default function ResearchChat() {
     }
     setMessages(prev => [...prev, userMsg])
     setSending(true)
+    setTask('research-chat', 'Answering…')
 
     try {
       const { answer } = await researchChat({
@@ -83,6 +84,7 @@ export default function ResearchChat() {
       setError(e?.message || 'Failed to get response')
     } finally {
       setSending(false)
+      setTask('research-chat', null)
     }
   }
 
