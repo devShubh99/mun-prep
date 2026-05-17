@@ -126,8 +126,9 @@ export default function DocumentWorkshop() {
     setReviewContent(null)
   }
 
-  const handlePrev = () => setActiveChangeIdx(prev => Math.max(0, prev - 1))
-  const handleNext = () => setActiveChangeIdx(prev => Math.min(changes.length - 1, prev + 1))
+  const handleSelectChange = (id: number) => {
+    setActiveChangeIdx(id)
+  }
 
   const saveDocument = useCallback(async () => {
     if (!activeDoc || reviewMode) return
@@ -236,7 +237,14 @@ export default function DocumentWorkshop() {
     setDocs(prev => prev.map(d => d.id === activeDocId ? { ...d, content } : d))
   }
 
-  const activeChange = changes[activeChangeIdx]
+  const isDocEmpty = (() => {
+    try {
+      const doc = JSON.parse(activeDoc?.content || '{}')
+      if (!doc.content || doc.content.length === 0) return true
+      const text = doc.content.map((n: any) => n.content?.map((c: any) => c.text || '').join('')).join('').trim()
+      return text.length < 3
+    } catch { return true }
+  })()
 
   return (
     <div>
@@ -322,6 +330,7 @@ export default function DocumentWorkshop() {
             content={activeDoc.content}
             documentType="general"
             onPreview={handleAiResult}
+            disabled={isDocEmpty}
           />
           <div className="mt-4">
             <RichTextEditor
@@ -336,29 +345,6 @@ export default function DocumentWorkshop() {
 
       {activeDoc && reviewMode && reviewContent && (
         <div>
-          {activeChange && (
-            <div className="card-light mb-4 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-[500] text-body">
-                  Paragraph {activeChange.id + 1} {activeChange.type === 'added' ? '(new)' : ''}
-                  <span className="text-muted-soft ml-2">
-                    {activeChange.status === 'accepted' ? '✓ Accepted' : activeChange.status === 'rejected' ? '✗ Rejected' : ''}
-                  </span>
-                </h4>
-              </div>
-              {activeChange.originalText && (
-                <div className="bg-error/5 rounded-lg p-3 border-l-4 border-l-error mb-2">
-                  <span className="text-[10px] font-[500] text-error uppercase tracking-wide">Original</span>
-                  <p className="text-sm text-body line-through decoration-error/50 mt-0.5">{activeChange.originalText}</p>
-                </div>
-              )}
-              <div className="bg-success/5 rounded-lg p-3 border-l-4 border-l-success">
-                <span className="text-[10px] font-[500] text-success uppercase tracking-wide">Suggestion</span>
-                <p className="text-sm text-body mt-0.5">{activeChange.newText}</p>
-              </div>
-            </div>
-          )}
-
           <RichTextEditor
             content={reviewContent}
             onChange={() => {}}
@@ -371,8 +357,7 @@ export default function DocumentWorkshop() {
             onRejectChange={() => updateChangeStatus(activeChangeIdx, 'rejected')}
             onAcceptAll={acceptAll}
             onRejectAll={rejectAll}
-            onPrevChange={handlePrev}
-            onNextChange={handleNext}
+            onSelectChange={handleSelectChange}
             onExitReview={handleExitReview}
           />
         </div>

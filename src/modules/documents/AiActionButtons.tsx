@@ -7,6 +7,7 @@ interface Props {
   content: string
   documentType: string
   onPreview: (result: string, action: string) => void
+  disabled?: boolean
 }
 
 const ACTIONS = [
@@ -16,7 +17,7 @@ const ACTIONS = [
   { key: 'insert-clause', label: 'Insert Clause', icon: FilePlus },
 ]
 
-export default function AiActionButtons({ content, documentType, onPreview }: Props) {
+export default function AiActionButtons({ content, documentType, onPreview, disabled }: Props) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,7 +45,7 @@ export default function AiActionButtons({ content, documentType, onPreview }: Pr
         <button
           key={action.key}
           onClick={() => handleAction(action.key)}
-          disabled={loadingAction !== null}
+          disabled={loadingAction !== null || disabled}
           className="btn-secondary text-xs"
         >
           {loadingAction === action.key ? (

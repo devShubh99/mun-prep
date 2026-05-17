@@ -2,7 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import { useEffect, useRef } from 'react';
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading1, Heading2, Heading3, Moon, Sun, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading1, Heading2, Heading3, Moon, Sun, Check, X } from 'lucide-react';
 import ToolbarButton from '@/components/ToolbarButton';
 import { SuggestionInsert, SuggestionDelete } from './suggestion-marks';
 
@@ -26,12 +26,11 @@ interface Props {
   onRejectChange?: () => void
   onAcceptAll?: () => void
   onRejectAll?: () => void
-  onPrevChange?: () => void
-  onNextChange?: () => void
+  onSelectChange?: (changeId: number) => void
   onExitReview?: () => void
 }
 
-export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, reviewMode, changes, activeChangeIdx, onAcceptChange, onRejectChange, onAcceptAll, onRejectAll, onPrevChange, onNextChange, onExitReview }: Props) {
+export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, reviewMode, changes, activeChangeIdx, onAcceptChange, onRejectChange, onAcceptAll, onRejectAll, onSelectChange, onExitReview }: Props) {
   const contentRef = useRef(content);
 
   const editor = useEditor({
@@ -50,6 +49,22 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
       const json = JSON.stringify(editor.getJSON());
       contentRef.current = json;
       onChange(json);
+    },
+    onSelectionUpdate: ({ editor: ed }) => {
+      if (!reviewMode || !onSelectChange) return
+      let foundId: number | null = null
+      ed.state.doc.nodesBetween(0, ed.state.doc.content.size, (node) => {
+        if (foundId !== null) return false
+        if (!node.marks) return
+        for (const mark of node.marks) {
+          const id = mark.attrs?.changeId
+          if (id !== null && id !== undefined) {
+            foundId = Number(id)
+            return false
+          }
+        }
+      })
+      if (foundId !== null) onSelectChange(foundId)
     },
   });
 
@@ -117,15 +132,9 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
             </span>
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={onPrevChange} disabled={activeChangeIdx === 0 || activeChangeIdx === undefined} className="btn-ghost text-xs">
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-xs text-muted min-w-[40px] text-center">
-              {activeChangeIdx !== undefined ? activeChangeIdx + 1 : 0}/{changes.length}
+            <span className="text-xs text-muted">
+              {activeChangeIdx !== undefined ? `Paragraph ${activeChangeIdx + 1} of ${changes.length}` : 'Click a change to select it'}
             </span>
-            <button onClick={onNextChange} disabled={activeChangeIdx !== undefined && activeChangeIdx >= changes.length - 1} className="btn-ghost text-xs">
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
             <span className="w-px h-4 bg-hairline mx-1" />
             {activeChangeIdx !== undefined && changes[activeChangeIdx]?.status === 'pending' && (
               <>

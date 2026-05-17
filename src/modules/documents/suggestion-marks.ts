@@ -2,8 +2,10 @@ import { Mark } from '@tiptap/core'
 
 export const SuggestionInsert = Mark.create({
   name: 'suggestionInsert',
-  renderHTML() {
+  addAttributes() { return { changeId: { default: null } } },
+  renderHTML({ mark }) {
     return ['span', {
+      'data-change-id': mark.attrs.changeId,
       'data-suggestion-type': 'insert',
       style: 'background: rgba(93,184,114,0.25); border-bottom: 2px solid #5db872;',
     }, 0]
@@ -13,8 +15,10 @@ export const SuggestionInsert = Mark.create({
 
 export const SuggestionDelete = Mark.create({
   name: 'suggestionDelete',
-  renderHTML() {
+  addAttributes() { return { changeId: { default: null } } },
+  renderHTML({ mark }) {
     return ['span', {
+      'data-change-id': mark.attrs.changeId,
       'data-suggestion-type': 'delete',
       style: 'background: rgba(198,69,69,0.15); text-decoration: line-through; color: #c64545;',
     }, 0]
@@ -36,7 +40,7 @@ export function buildReviewContent(
       doc.content.push({
         type: 'paragraph',
         attrs: { 'data-change-id': String(change.id) },
-        content: [{ type: 'text', marks: [{ type: 'suggestionInsert' }], text: change.newText }],
+        content: [{ type: 'text', marks: [{ type: 'suggestionInsert', attrs: { changeId: String(change.id) } }], text: change.newText }],
       })
       continue
     }
@@ -52,7 +56,7 @@ export function buildReviewContent(
     if (change.originalText) {
       newPara.content.push({
         type: 'text',
-        marks: [{ type: 'suggestionDelete' }],
+        marks: [{ type: 'suggestionDelete', attrs: { changeId: String(change.id) } }],
         text: change.originalText,
       })
     }
@@ -62,7 +66,7 @@ export function buildReviewContent(
       }
       newPara.content.push({
         type: 'text',
-        marks: [{ type: 'suggestionInsert' }],
+        marks: [{ type: 'suggestionInsert', attrs: { changeId: String(change.id) } }],
         text: change.newText,
       })
     }
