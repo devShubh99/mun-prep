@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { ConferenceProvider } from './hooks/useConference'
 import { AuthGuard } from './components/AuthGuard'
+import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
@@ -14,6 +15,7 @@ import DebateSimulator from './modules/debate/DebateSimulator'
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
@@ -33,5 +35,6 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    </ErrorBoundary>
   )
 }

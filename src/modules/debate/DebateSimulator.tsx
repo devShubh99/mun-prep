@@ -131,7 +131,7 @@ export default function DebateSimulator() {
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}
       {loading && <div className="mb-4"><ProgressBar /></div>}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <label htmlFor="debate-difficulty" className="text-sm font-[500] text-body">Difficulty:</label>
         <select id="debate-difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value)} className="input w-auto">
           {DIFFICULTY_LEVELS.map(l => <option key={l.difficulty} value={l.difficulty}>{l.label}</option>)}
@@ -152,6 +152,42 @@ export default function DebateSimulator() {
       )}
 
       {currentEval && <FeedbackDisplay feedback={currentEval} />}
+
+      {(() => {
+        const scored = history.filter(e => e.evaluation)
+        if (scored.length >= 2) {
+          const avgArg = scored.reduce((s, e) => s + (e.evaluation!.argumentScore || 0), 0) / scored.length
+          const avgDip = scored.reduce((s, e) => s + (e.evaluation!.diplomacyScore || 0), 0) / scored.length
+          const first = scored[scored.length - 1]
+          const last = scored[0]
+          const trend = last?.evaluation && first?.evaluation
+            ? (last.evaluation.argumentScore + last.evaluation.diplomacyScore) -
+              (first.evaluation.argumentScore + first.evaluation.diplomacyScore)
+            : 0
+          return (
+            <div className="card-light mb-6">
+              <h3 className="font-[500] text-sm text-body mb-3">Session Summary</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <span className="text-2xl font-serif text-primary">{((avgArg + avgDip) / 2).toFixed(1)}</span>
+                  <p className="text-xs text-muted mt-1">Avg Score /10</p>
+                </div>
+                <div>
+                  <span className="text-2xl font-serif text-ink">{scored.length}</span>
+                  <p className="text-xs text-muted mt-1">Questions</p>
+                </div>
+                <div>
+                  <span className={`text-2xl font-serif ${trend >= 0 ? 'text-success' : 'text-error'}`}>
+                    {trend >= 0 ? '+' : ''}{trend}
+                  </span>
+                  <p className="text-xs text-muted mt-1">Trend</p>
+                </div>
+              </div>
+            </div>
+          )
+        }
+        return null
+      })()}
 
       {history.length > 0 && (
         <div className="mt-8">

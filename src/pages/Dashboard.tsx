@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConference } from '../hooks/useConference'
-import { Plus, Search, Trash2, Globe, Edit2, Copy } from 'lucide-react'
+import { Plus, Search, Trash2, Globe, Edit2 } from 'lucide-react'
+import { DashboardSkeleton } from '../components/Skeleton'
 
 const COUNTRIES = [
   'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
@@ -250,26 +251,13 @@ export default function Dashboard() {
     }
   }
 
-  const handleDuplicate = async (c: typeof conferences[0]) => {
-    setError(null)
-    const created = await createConference({
-      name: `${c.name} (copy)`,
-      assigned_country: c.assigned_country,
-      committee: c.committee,
-      topic: c.topic,
-      special_role: c.special_role,
-      deadline: c.deadline,
-    })
-    if (!created) setError('Failed to duplicate')
-  }
+  if (loading) return <DashboardSkeleton />
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-      </div>
-    )
-  }
+  const urgentCount = conferences.filter(c => {
+    if (!c.deadline) return false
+    const days = (new Date(c.deadline).getTime() - Date.now()) / 86400000
+    return days < 3
+  }).length
 
   const modal = showModal && (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setShowModal(false); setEditingId(null) }}>
@@ -326,6 +314,13 @@ export default function Dashboard() {
       {(error || conferenceError) && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error || conferenceError}</div>
       )}
+      {urgentCount > 0 && (
+        <div className="flex items-center gap-2 mb-6 bg-warning/10 rounded-lg px-4 py-3 text-sm text-warning">
+          <span>⚠️</span>
+          <span>{urgentCount} conference{urgentCount > 1 ? 's' : ''} need{urgentCount === 1 ? 's' : ''} attention</span>
+          <button onClick={() => setSort('deadline')} className="underline ml-auto">Sort by deadline</button>
+        </div>
+      )}
 
       {conferences.length > 0 && (
         <div className="flex gap-3 mb-6">
@@ -344,12 +339,6 @@ export default function Dashboard() {
             <option value="deadline">Deadline (soonest)</option>
             <option value="name">Name A-Z</option>
           </select>
-        </div>
-      )}
-
-      {sorted.length === 0 && !search && loading && (
-        <div className="flex items-center justify-center py-24">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
         </div>
       )}
 
@@ -386,10 +375,11 @@ export default function Dashboard() {
                   <button onClick={() => openEdit(c)} className="btn-ghost p-1 text-muted hover:text-ink" title="Edit">
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => handleDuplicate(c)} className="btn-ghost p-1 text-muted hover:text-ink" title="Duplicate">
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => deleteConference(c.id)} className="btn-ghost p-1 text-muted hover:text-error" title="Delete">
+                  <button onClick={() => {
+                    if (window.confirm(`Permanently delete "${c.name}"? This will delete all associated documents, debate history, and research. This cannot be undone.`)) {
+                      deleteConference(c.id)
+                    }
+                  }} className="btn-ghost p-1 text-muted hover:text-error" title="Delete">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
