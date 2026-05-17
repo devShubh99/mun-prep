@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { supabase } from '../../lib/supabase'
 import { useAutoSave } from '../../hooks/useAutoSave'
@@ -36,24 +36,30 @@ export default function DocumentWorkshop() {
   const [renameValue, setRenameValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [darkMode, setDarkMode] = useState(false)
-  const [selectionInfo, setSelectionInfo] = useState<SelectionInfo | null>(null)
+  const setSelectionInfo = useState<SelectionInfo | null>(null)[1]
+  const selectionRef = useRef<SelectionInfo | null>(null)
+
+  const handleSelection = (info: SelectionInfo | null) => {
+    selectionRef.current = info
+    setSelectionInfo(info)
+  }
 
   const activeDoc = docs.find(d => d.id === activeDocId)
 
-  const effectiveContent = selectionInfo?.text ?? ''
-
-  const isActionDisabled = !selectionInfo || selectionInfo.text.trim().length < 3
+  const isActionDisabled = !selectionRef.current || selectionRef.current.text.trim().length < 3
 
   const getOriginalDoc = () => {
     try { return JSON.parse(activeDoc?.content || '{}') } catch { return { type: 'doc', content: [] } }
   }
 
   const applyResult = (rawText: string, action: string) => {
+    const sel = selectionRef.current
     const text = rawText.replace(/\*+/g, '').trim()
-    if (!text) { setError('AI returned empty response'); return }
+    if (!text || !sel) { setError('AI returned empty response'); return }
     const original = getOriginalDoc()
-    const result = applyAiContent(original, text, selectionInfo, action === 'brainstorm')
+    const result = applyAiContent(original, text, sel, action === 'brainstorm')
     handleContentChange(JSON.stringify(result))
+    selectionRef.current = null
     setSelectionInfo(null)
   }
 
@@ -66,6 +72,7 @@ export default function DocumentWorkshop() {
   useAutoSave(activeDoc?.content, saveDocument)
 
   useEffect(() => {
+    selectionRef.current = null
     setSelectionInfo(null)
   }, [activeDocId])
 
@@ -264,7 +271,7 @@ export default function DocumentWorkshop() {
       {activeDoc && (
         <div>
           <AiActionButtons
-            content={extractPlainText(effectiveContent)}
+            getContent={() => extractPlainText(selectionRef.current?.text ?? '')}
             documentType="general"
             onApply={applyResult}
             disabled={isActionDisabled}
@@ -275,7 +282,7 @@ export default function DocumentWorkshop() {
               onChange={handleContentChange}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
-              onSelection={setSelectionInfo}
+              onSelection={handleSelection}
             />
           </div>
         </div>

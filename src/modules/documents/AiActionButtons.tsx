@@ -5,7 +5,7 @@ import { Wand2, Lightbulb } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
 
 interface Props {
-  content: string
+  getContent: () => string
   documentType: string
   onApply: (result: string, action: string) => void
   disabled?: boolean
@@ -16,17 +16,13 @@ const ACTIONS = [
   { key: 'brainstorm', label: 'Brainstorm', icon: Lightbulb },
 ]
 
-export default function AiActionButtons({ content, documentType, onApply, disabled }: Props) {
+export default function AiActionButtons({ getContent, documentType, onApply, disabled }: Props) {
   const { tasks, setTask, setDocumentDraft } = useConference()
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     return () => abortRef.current?.abort()
   }, [])
-
-  useEffect(() => {
-    abortRef.current?.abort()
-  }, [content])
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +33,8 @@ export default function AiActionButtons({ content, documentType, onApply, disabl
   }
 
   const handleAction = async (action: string) => {
+    const content = getContent()
+    if (content.trim().length < 3) { setError('Select at least 3 characters first.'); return }
     setLoadingAction(action)
     setError(null)
     setTask('documents', actionLabels[action] || 'Processing\u2026')
