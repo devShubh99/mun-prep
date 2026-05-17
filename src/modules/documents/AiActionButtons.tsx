@@ -23,6 +23,10 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
   useEffect(() => {
     return () => abortRef.current?.abort()
   }, [])
+
+  useEffect(() => {
+    abortRef.current?.abort()
+  }, [content])
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 

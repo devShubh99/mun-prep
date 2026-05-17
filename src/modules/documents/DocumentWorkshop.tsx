@@ -8,18 +8,6 @@ import { Plus, X, Archive, RotateCcw, Trash2 } from 'lucide-react'
 import type { Document } from '../../types'
 import { buildReviewContent, applyChanges } from './suggestion-marks'
 
-function extractTextFromDoc(jsonStr: string): string[] {
-  try {
-    const doc = JSON.parse(jsonStr)
-    if (!doc?.content) return jsonStr ? [jsonStr] : []
-    if (!Array.isArray(doc.content)) return []
-    return doc.content
-      .filter((n: any) => n.type === 'paragraph')
-      .map((n: any) => n.content?.map((c: any) => c.text || '').join('') || '')
-      .filter((t: string) => t.trim())
-  } catch { return jsonStr ? [jsonStr] : [] }
-}
-
 function extractPlainText(content: string): string {
   try {
     const doc = JSON.parse(content)
@@ -75,8 +63,18 @@ export default function DocumentWorkshop() {
     const resultText = rawText.replace(/\*+/g, '').trim()
     if (action === 'polish') {
       if (!selectionInfo) return []
-      const paragraphTexts = extractTextFromDoc(originalJson)
-      const originalFull = paragraphTexts.slice(selectionInfo.startPara, selectionInfo.endPara + 1).join('\n').trim()
+      let originalFull = ''
+      try {
+        const fullDoc = JSON.parse(originalJson)
+        const nodes = Array.isArray(fullDoc?.content)
+          ? fullDoc.content.slice(selectionInfo.startPara, selectionInfo.endPara + 1)
+          : []
+        originalFull = nodes
+          .map((n: any) => n.content?.map((c: any) => c.text || '').join('') || '')
+          .filter((t: string) => t.trim())
+          .join('\n')
+          .trim()
+      } catch { return [] }
       const newFull = resultText.trim()
       if (!newFull || originalFull.toLowerCase() === newFull.toLowerCase() || !originalFull) return []
       return [{
@@ -168,6 +166,10 @@ export default function DocumentWorkshop() {
   }, [activeDoc, reviewMode])
 
   useAutoSave(activeDoc?.content, saveDocument)
+
+  useEffect(() => {
+    setSelectionInfo(null)
+  }, [activeDocId])
 
   useEffect(() => {
     if (!conference) return
