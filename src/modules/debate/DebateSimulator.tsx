@@ -301,7 +301,7 @@ export default function DebateSimulator() {
                           <span className="text-xs text-muted">Argument</span>
                           <div className="flex items-center gap-1 mt-0.5">
                             {Array.from({ length: 5 }, (_, i) => (
-                              <span key={i} className={`text-sm ${i < Math.round(entry.evaluation!.argumentScore / 2) ? 'text-accent-amber' : 'text-hairline'}`}>\u2605</span>
+                              <span key={i} className={`text-sm ${i < Math.round(entry.evaluation!.argumentScore / 2) ? 'text-accent-amber' : 'text-hairline'}`}>{'\u2605'}</span>
                             ))}
                             <span className="text-xs text-muted ml-1">{entry.evaluation.argumentScore}/10</span>
                           </div>
@@ -310,7 +310,7 @@ export default function DebateSimulator() {
                           <span className="text-xs text-muted">Diplomacy</span>
                           <div className="flex items-center gap-1 mt-0.5">
                             {Array.from({ length: 5 }, (_, i) => (
-                              <span key={i} className={`text-sm ${i < Math.round(entry.evaluation!.diplomacyScore / 2) ? 'text-accent-amber' : 'text-hairline'}`}>\u2605</span>
+                              <span key={i} className={`text-sm ${i < Math.round(entry.evaluation!.diplomacyScore / 2) ? 'text-accent-amber' : 'text-hairline'}`}>{'\u2605'}</span>
                             ))}
                             <span className="text-xs text-muted ml-1">{entry.evaluation.diplomacyScore}/10</span>
                           </div>
@@ -318,13 +318,13 @@ export default function DebateSimulator() {
                       </div>
 
                       <div className="p-2.5 bg-success/10 rounded-lg text-sm text-body">
-                        <span className="font-[500] text-success">\uD83D\uDC4D </span>{entry.evaluation.compliment}
+                        <span className="font-[500] text-success">👍 </span>{entry.evaluation.compliment}
                       </div>
                       <div className="p-2.5 bg-warning/10 rounded-lg text-sm text-body">
-                        <span className="font-[500] text-warning">\uD83D\uDCA1 </span>{entry.evaluation.improvement}
+                        <span className="font-[500] text-warning">💡 </span>{entry.evaluation.improvement}
                       </div>
                       <div className="p-2.5 bg-primary/10 rounded-lg text-sm text-body">
-                        <span className="font-[500] text-primary">\uD83D\uDD04 Rebuttal:</span>
+                        <span className="font-[500] text-primary">🔄 Rebuttal:</span>
                         <p className="mt-1">{entry.evaluation.modelRebuttal}</p>
                       </div>
 
@@ -357,7 +357,7 @@ export default function DebateSimulator() {
                 <div key={entry.id} className="bg-surface-soft/50 rounded-xl px-4 py-3 flex items-center justify-between">
                   <div className="min-w-0 mr-4">
                     <p className="text-sm text-muted truncate">{entry.question}</p>
-                    <span className="text-xs text-muted-soft">{entry.role} \u2014 {new Date(entry.created_at).toLocaleDateString()}</span>
+                    <span className="text-xs text-muted-soft">{entry.role} — {new Date(entry.created_at).toLocaleDateString()}</span>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => handleRestore(entry.id)} className="btn-ghost text-xs flex items-center gap-1">
