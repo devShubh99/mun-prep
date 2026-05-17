@@ -76,11 +76,15 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
         if (foundId !== null) onSelectChange(foundId)
       }
       if (!reviewMode) {
-        const cursorIdx = ed.state.selection.empty ? ed.state.doc.resolve(ed.state.selection.anchor).index() : -1
+        const resolveBlockIdx = (pos: number) => {
+          const r = ed.state.doc.resolve(pos)
+          return r.depth >= 1 ? r.index(1) : 0
+        }
+        const cursorIdx = ed.state.selection.empty ? resolveBlockIdx(ed.state.selection.anchor) : -1
         onCursorParagraph?.(cursorIdx)
         if (onSelection && !ed.state.selection.empty) {
           const text = ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to).trim()
-          if (text.length >= 3) onSelection({ text, startPara: ed.state.doc.resolve(ed.state.selection.from).index(), endPara: ed.state.doc.resolve(ed.state.selection.to).index() })
+          if (text.length >= 3) onSelection({ text, startPara: resolveBlockIdx(ed.state.selection.from), endPara: resolveBlockIdx(ed.state.selection.to) })
           else onSelection(null)
         } else if (onSelection) onSelection(null)
       }
