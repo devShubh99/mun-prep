@@ -15,7 +15,6 @@
 | `npm run build` | `tsc -b && vite build` |
 | `npx vercel dev` | Full stack (frontend + functions) on `:3000` |
 | `npm run test:unit` | Vitest (9 tests — countryFlags utility) |
-| `npm run test:e2e` | Playwright (9 tests — login/signup pages, design system, redirect, validation. Needs preview on `:4174`) |
 
 ## Architecture
 
