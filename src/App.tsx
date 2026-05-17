@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import { Analytics } from '@vercel/analytics/react'
 import { ConferenceProvider } from './hooks/useConference'
 import { AuthGuard } from './components/AuthGuard'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -37,6 +38,7 @@ export default function App() {
       </Route>
     </Routes>
     <SpeedInsights />
+    <Analytics />
     </ErrorBoundary>
   )
 }
