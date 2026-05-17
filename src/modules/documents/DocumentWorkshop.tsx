@@ -4,8 +4,9 @@ import { supabase } from '../../lib/supabase'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import RichTextEditor from './RichTextEditor'
 import AiActionButtons from './AiActionButtons'
-import { Plus, X, Archive, RotateCcw, Trash2, XCircle, CheckCircle, CheckSquare, XSquare } from 'lucide-react'
+import { Plus, X, Archive, RotateCcw, Trash2 } from 'lucide-react'
 import type { Document } from '../../types'
+import { buildReviewContent, applyChanges } from './suggestion-marks'
 
 function wordCount(content: string): number {
   try {
@@ -26,45 +27,12 @@ function extractTextFromDoc(jsonStr: string): string[] {
   } catch { return [] }
 }
 
-interface Suggestion {
+interface Change {
   id: number
   type: 'changed' | 'added'
   originalText: string
-  suggestedText: string
-  accepted: boolean | null
-}
-
-function buildSuggestions(originalJson: string, resultText: string, action: string): Suggestion[] {
-  const originals = extractTextFromDoc(originalJson)
-  const results = resultText.split('\n').filter(t => t.trim())
-
-  if (action === 'polish' || action === 'shorten') {
-    const suggestions: Suggestion[] = []
-    const maxLen = Math.max(originals.length, results.length)
-    for (let i = 0; i < maxLen; i++) {
-      const orig = originals[i] || ''
-      const suggested = results[i] || ''
-      if (orig.toLowerCase().trim() === suggested.toLowerCase().trim()) continue
-      if (!orig && !suggested) continue
-      suggestions.push({
-        id: i,
-        type: 'changed',
-        originalText: orig,
-        suggestedText: suggested,
-        accepted: null,
-      })
-    }
-    return suggestions
-  }
-
-  // Brainstorm / Insert clause — show as a single new paragraph
-  return [{
-    id: 0,
-    type: 'added',
-    originalText: '',
-    suggestedText: resultText,
-    accepted: null,
-  }]
+  newText: string
+  status: 'pending' | 'accepted' | 'rejected'
 }
 
 export default function DocumentWorkshop() {
@@ -77,71 +45,97 @@ export default function DocumentWorkshop() {
   const [renameValue, setRenameValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [darkMode, setDarkMode] = useState(false)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  const [reviewAction, setReviewAction] = useState<string | null>(null)
+  const [changes, setChanges] = useState<Change[]>([])
+  const [reviewMode, setReviewMode] = useState(false)
+  const [reviewContent, setReviewContent] = useState<string | null>(null)
+  const [activeChangeIdx, setActiveChangeIdx] = useState(0)
 
   const activeDoc = docs.find(d => d.id === activeDocId)
-  const isReviewing = suggestions.length > 0
+
+  const buildChanges = (originalJson: string, resultText: string, action: string): Change[] => {
+    const originals = extractTextFromDoc(originalJson)
+    const results = resultText.split('\n').filter(t => t.trim())
+
+    if (action === 'polish' || action === 'shorten') {
+      const items: Change[] = []
+      const maxLen = Math.max(originals.length, results.length)
+      for (let i = 0; i < maxLen; i++) {
+        const orig = originals[i] || ''
+        const suggested = results[i] || ''
+        if (orig.toLowerCase().trim() === suggested.toLowerCase().trim()) continue
+        if (!orig && !suggested) continue
+        items.push({ id: i, type: 'changed', originalText: orig, newText: suggested, status: 'pending' })
+      }
+      return items
+    }
+
+    return [{ id: 0, type: 'added', originalText: '', newText: resultText, status: 'pending' }]
+  }
+
+  const getOriginalDoc = () => {
+    try { return JSON.parse(activeDoc?.content || '{}') } catch { return { type: 'doc', content: [] } }
+  }
 
   const handleAiResult = (resultText: string, action: string) => {
-    const built = buildSuggestions(activeDoc?.content || '{}', resultText, action)
-    if (built.length === 0) {
-      setError('AI returned no changes.')
-      return
-    }
-    setSuggestions(built)
-    setReviewAction(action)
+    const built = buildChanges(activeDoc?.content || '{}', resultText, action)
+    if (built.length === 0) { setError('AI returned no changes.'); return }
+    setChanges(built)
+    setActiveChangeIdx(0)
+    setReviewMode(true)
+    // Build the review content with marks applied
+    const original = getOriginalDoc()
+    const reviewDoc = buildReviewContent(original, built)
+    setReviewContent(JSON.stringify(reviewDoc))
   }
 
-  const acceptSuggestion = (id: number) => {
-    setSuggestions(prev => prev.map(s => s.id === id ? { ...s, accepted: true } : s))
+  const updateChangeStatus = (id: number, status: 'accepted' | 'rejected') => {
+    setChanges(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, status } : c)
+      const original = getOriginalDoc()
+      const reviewDoc = buildReviewContent(original, updated)
+      setReviewContent(JSON.stringify(reviewDoc))
+      return updated
+    })
   }
 
-  const rejectSuggestion = (id: number) => {
-    setSuggestions(prev => prev.map(s => s.id === id ? { ...s, accepted: false } : s))
+  const acceptAll = () => {
+    setChanges(prev => {
+      const updated = prev.map(c => c.status === 'pending' ? { ...c, status: 'accepted' as const } : c)
+      const original = getOriginalDoc()
+      setReviewContent(JSON.stringify(buildReviewContent(original, updated)))
+      return updated
+    })
   }
 
-  const applyAll = () => {
+  const rejectAll = () => {
+    setChanges(prev => {
+      const updated = prev.map(c => c.status === 'pending' ? { ...c, status: 'rejected' as const } : c)
+      const original = getOriginalDoc()
+      setReviewContent(JSON.stringify(buildReviewContent(original, updated)))
+      return updated
+    })
+  }
+
+  const handleExitReview = () => {
     if (!activeDocId || !activeDoc) return
-
-    if (reviewAction === 'polish' || reviewAction === 'shorten') {
-      const newParagraphs = suggestions
-        .sort((a, b) => a.id - b.id)
-        .map(s => ({
-          type: 'paragraph' as const,
-          content: [{ type: 'text' as const, text: s.accepted ? s.suggestedText : s.originalText }],
-        }))
-
-      const resultJson = JSON.stringify({ type: 'doc', content: newParagraphs })
-      handleContentChange(resultJson)
-    } else {
-      // Append new content at the end
-      const acceptedText = suggestions
-        .filter(s => s.accepted !== false)
-        .map(s => s.suggestedText)
-        .join('\n')
-      try {
-        const parsed = JSON.parse(activeDoc.content)
-        parsed.content.push({
-          type: 'paragraph',
-          content: [{ type: 'text', text: '\n' + acceptedText }],
-        })
-        handleContentChange(JSON.stringify(parsed))
-      } catch { handleContentChange(activeDoc.content) }
-    }
-
-    setSuggestions([])
-    setReviewAction(null)
+    const original = getOriginalDoc()
+    const result = applyChanges(original, changes)
+    handleContentChange(JSON.stringify(result))
+    setReviewMode(false)
+    setChanges([])
+    setReviewContent(null)
   }
 
-  const dismissReview = () => {
-    setSuggestions([])
-    setReviewAction(null)
-  }
+  const handlePrev = () => setActiveChangeIdx(prev => Math.max(0, prev - 1))
+  const handleNext = () => setActiveChangeIdx(prev => Math.min(changes.length - 1, prev + 1))
 
-  const pendingCount = suggestions.filter(s => s.accepted === null).length
-  const decidedCount = suggestions.filter(s => s.accepted !== null).length
-  const allDecided = pendingCount === 0 && suggestions.length > 0
+  const saveDocument = useCallback(async () => {
+    if (!activeDoc || reviewMode) return
+    const { error: err } = await supabase.from('documents').update({ content: activeDoc.content, updated_at: new Date().toISOString() }).eq('id', activeDoc.id)
+    if (err) setError(err.message)
+  }, [activeDoc, reviewMode])
+
+  useAutoSave(activeDoc?.content, saveDocument)
 
   useEffect(() => {
     if (!conference) return
@@ -173,14 +167,6 @@ export default function DocumentWorkshop() {
         if (!err && data) setArchivedDocs(data as Document[])
       })
   }, [conference?.id, showArchived])
-
-  const saveDocument = useCallback(async () => {
-    if (!activeDoc) return
-    const { error: err } = await supabase.from('documents').update({ content: activeDoc.content, updated_at: new Date().toISOString() }).eq('id', activeDoc.id)
-    if (err) setError(err.message)
-  }, [activeDoc])
-
-  useAutoSave(activeDoc?.content, saveDocument)
 
   const handleCreate = async () => {
     if (!conference) return
@@ -250,6 +236,8 @@ export default function DocumentWorkshop() {
     setDocs(prev => prev.map(d => d.id === activeDocId ? { ...d, content } : d))
   }
 
+  const activeChange = changes[activeChangeIdx]
+
   return (
     <div>
       {error && (
@@ -264,7 +252,7 @@ export default function DocumentWorkshop() {
                 ? 'border-primary text-ink'
                 : 'border-transparent text-muted hover:text-body'
             }`}
-            onClick={() => setActiveDocId(doc.id)}
+            onClick={() => { if (!reviewMode) setActiveDocId(doc.id) }}
           >
             {renamingId === doc.id ? (
               <input
@@ -294,7 +282,7 @@ export default function DocumentWorkshop() {
             </button>
           </div>
         ))}
-        <button onClick={handleCreate} className="p-3 text-muted hover:text-ink">
+        <button onClick={handleCreate} disabled={reviewMode} className="p-3 text-muted hover:text-ink">
           <Plus className="w-4 h-4" />
         </button>
         <div className="ml-auto flex items-center gap-2">
@@ -328,7 +316,7 @@ export default function DocumentWorkshop() {
         </div>
       )}
 
-      {activeDoc && !isReviewing ? (
+      {activeDoc && !reviewMode && (
         <div>
           <AiActionButtons
             content={activeDoc.content}
@@ -344,66 +332,53 @@ export default function DocumentWorkshop() {
             />
           </div>
         </div>
-      ) : activeDoc && isReviewing ? (
-        <div className="card-light">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-[500] text-sm text-body capitalize">{reviewAction} Review</h3>
-            <span className="text-xs text-muted">{decidedCount}/{suggestions.length} reviewed</span>
-          </div>
-          <div className="space-y-4">
-            {suggestions.map(s => (
-              <div key={s.id} className="border border-hairline rounded-lg overflow-hidden">
-                {s.type === 'added' && (
-                  <div className="px-4 py-2 bg-accent-amber/5 border-b border-hairline text-xs font-[500] text-accent-amber flex items-center gap-1">
-                    <span>🆕</span> New content to be appended
-                  </div>
-                )}
-                <div className="p-4 space-y-2">
-                  {s.originalText && (
-                    <div className="bg-error/5 rounded-lg p-3 border-l-4 border-l-error">
-                      <span className="text-xs font-[500] text-error mb-1 block">Original</span>
-                      <p className="text-sm text-body line-through decoration-error/50">{s.originalText}</p>
-                    </div>
-                  )}
-                  <div className="bg-success/5 rounded-lg p-3 border-l-4 border-l-success">
-                    <span className="text-xs font-[500] text-success mb-1 block">Suggestion</span>
-                    <p className="text-sm text-body">{s.suggestedText}</p>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 px-4 pb-4">
-                  <button
-                    onClick={() => rejectSuggestion(s.id)}
-                    disabled={s.accepted !== null}
-                    className={`btn-ghost text-xs flex items-center gap-1 ${s.accepted === false ? 'text-error' : ''}`}
-                  >
-                    <XCircle className="w-3.5 h-3.5" /> {s.accepted === false ? 'Rejected' : 'Reject'}
-                  </button>
-                  <button
-                    onClick={() => acceptSuggestion(s.id)}
-                    disabled={s.accepted !== null}
-                    className={`btn-ghost text-xs flex items-center gap-1 ${s.accepted === true ? 'text-success' : ''}`}
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" /> {s.accepted === true ? 'Accepted' : 'Accept'}
-                  </button>
-                </div>
+      )}
+
+      {activeDoc && reviewMode && reviewContent && (
+        <div>
+          {activeChange && (
+            <div className="card-light mb-4 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-[500] text-body">
+                  Paragraph {activeChange.id + 1} {activeChange.type === 'added' ? '(new)' : ''}
+                  <span className="text-muted-soft ml-2">
+                    {activeChange.status === 'accepted' ? '✓ Accepted' : activeChange.status === 'rejected' ? '✗ Rejected' : ''}
+                  </span>
+                </h4>
               </div>
-            ))}
-          </div>
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-hairline">
-            <button onClick={dismissReview} className="btn-secondary flex items-center gap-1">
-              <XSquare className="w-4 h-4" /> Discard All
-            </button>
-            <button
-              onClick={applyAll}
-              disabled={!allDecided}
-              className="btn-primary flex items-center gap-1"
-            >
-              <CheckSquare className="w-4 h-4" />
-              {allDecided ? `Apply (${decidedCount} changes)` : `Review remaining (${pendingCount})`}
-            </button>
-          </div>
+              {activeChange.originalText && (
+                <div className="bg-error/5 rounded-lg p-3 border-l-4 border-l-error mb-2">
+                  <span className="text-[10px] font-[500] text-error uppercase tracking-wide">Original</span>
+                  <p className="text-sm text-body line-through decoration-error/50 mt-0.5">{activeChange.originalText}</p>
+                </div>
+              )}
+              <div className="bg-success/5 rounded-lg p-3 border-l-4 border-l-success">
+                <span className="text-[10px] font-[500] text-success uppercase tracking-wide">Suggestion</span>
+                <p className="text-sm text-body mt-0.5">{activeChange.newText}</p>
+              </div>
+            </div>
+          )}
+
+          <RichTextEditor
+            content={reviewContent}
+            onChange={() => {}}
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            reviewMode={reviewMode}
+            changes={changes}
+            activeChangeIdx={activeChangeIdx}
+            onAcceptChange={() => updateChangeStatus(activeChangeIdx, 'accepted')}
+            onRejectChange={() => updateChangeStatus(activeChangeIdx, 'rejected')}
+            onAcceptAll={acceptAll}
+            onRejectAll={rejectAll}
+            onPrevChange={handlePrev}
+            onNextChange={handleNext}
+            onExitReview={handleExitReview}
+          />
         </div>
-      ) : (
+      )}
+
+      {!activeDoc && (
         <div className="card text-center">
           <p className="text-muted">No documents yet. Click <strong>+</strong> to create one.</p>
         </div>

@@ -2,17 +2,36 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import { useEffect, useRef } from 'react';
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading1, Heading2, Heading3, Moon, Sun } from 'lucide-react';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading1, Heading2, Heading3, Moon, Sun, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ToolbarButton from '@/components/ToolbarButton';
+import { SuggestionInsert, SuggestionDelete } from './suggestion-marks';
+
+interface DiffChange {
+  id: number
+  type: 'changed' | 'added'
+  originalText: string
+  newText: string
+  status: 'pending' | 'accepted' | 'rejected'
+}
 
 interface Props {
   content: string
   onChange: (content: string) => void
   darkMode: boolean
   setDarkMode: (v: boolean) => void
+  reviewMode?: boolean
+  changes?: DiffChange[]
+  activeChangeIdx?: number
+  onAcceptChange?: () => void
+  onRejectChange?: () => void
+  onAcceptAll?: () => void
+  onRejectAll?: () => void
+  onPrevChange?: () => void
+  onNextChange?: () => void
+  onExitReview?: () => void
 }
 
-export default function RichTextEditor({ content, onChange, darkMode, setDarkMode }: Props) {
+export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, reviewMode, changes, activeChangeIdx, onAcceptChange, onRejectChange, onAcceptAll, onRejectAll, onPrevChange, onNextChange, onExitReview }: Props) {
   const contentRef = useRef(content);
 
   const editor = useEditor({
@@ -21,9 +40,13 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
         heading: { levels: [1, 2, 3] },
       }),
       Underline,
+      SuggestionInsert,
+      SuggestionDelete,
     ],
     content: (() => { try { return JSON.parse(content) } catch { return content } })(),
+    editable: !reviewMode,
     onUpdate: ({ editor }) => {
+      if (reviewMode) return
       const json = JSON.stringify(editor.getJSON());
       contentRef.current = json;
       onChange(json);
@@ -31,7 +54,7 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
   });
 
   useEffect(() => {
-    if (editor && content !== contentRef.current) {
+    if (editor && content !== contentRef.current && !reviewMode) {
       contentRef.current = content;
       try {
         editor.commands.setContent(JSON.parse(content), false);
@@ -39,9 +62,13 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
         editor.commands.setContent(content, false);
       }
     }
-  }, [editor, content]);
+  }, [editor, content, reviewMode]);
 
   if (!editor) return null;
+
+  const pending = changes?.filter(c => c.status === 'pending').length || 0
+  const accepted = changes?.filter(c => c.status === 'accepted').length || 0
+  const rejected = changes?.filter(c => c.status === 'rejected').length || 0
 
   return (
     <div className={`rounded-lg overflow-hidden border border-hairline ${darkMode ? 'bg-surface-dark' : 'bg-canvas'}`}>
@@ -80,9 +107,54 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
       </div>
-      <div className={darkMode ? 'editor-dark' : 'editor-light'}>
+
+      {reviewMode && changes && changes.length > 0 && (
+        <div className="bg-accent-amber/10 border-b border-accent-amber/20 px-4 py-2 flex items-center justify-between text-sm flex-wrap gap-2">
+          <span className="text-muted">
+            Reviewing {changes.length} change{changes.length > 1 ? 's' : ''}
+            <span className="text-muted-soft ml-1">
+              ({pending} pending, {accepted} accepted, {rejected} rejected)
+            </span>
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={onPrevChange} disabled={activeChangeIdx === 0 || activeChangeIdx === undefined} className="btn-ghost text-xs">
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs text-muted min-w-[40px] text-center">
+              {activeChangeIdx !== undefined ? activeChangeIdx + 1 : 0}/{changes.length}
+            </span>
+            <button onClick={onNextChange} disabled={activeChangeIdx !== undefined && activeChangeIdx >= changes.length - 1} className="btn-ghost text-xs">
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <span className="w-px h-4 bg-hairline mx-1" />
+            {activeChangeIdx !== undefined && changes[activeChangeIdx]?.status === 'pending' && (
+              <>
+                <button onClick={onRejectChange} className="btn-ghost text-xs text-error flex items-center gap-1">
+                  <X className="w-3 h-3" /> Reject
+                </button>
+                <button onClick={onAcceptChange} className="btn-ghost text-xs text-success flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Accept
+                </button>
+              </>
+            )}
+            {pending > 1 && (
+              <>
+                <span className="w-px h-4 bg-hairline mx-1" />
+                <button onClick={onRejectAll} className="btn-ghost text-xs text-error">Reject All Pending</button>
+                <button onClick={onAcceptAll} className="btn-ghost text-xs text-success">Accept All Pending</button>
+              </>
+            )}
+            <span className="w-px h-4 bg-hairline mx-1" />
+            <button onClick={onExitReview} className="btn-ghost text-xs text-muted" title="Apply accepted and exit">
+              Finish Review
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={reviewMode ? 'review-active' : darkMode ? 'editor-dark' : 'editor-light'}>
         <EditorContent editor={editor} className="prose prose-sm max-w-none" />
       </div>
     </div>
-  );
+  )
 }
