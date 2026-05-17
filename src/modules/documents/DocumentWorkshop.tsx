@@ -67,23 +67,15 @@ export default function DocumentWorkshop() {
 
   const activeDoc = docs.find(d => d.id === activeDocId)
 
-  const effectiveContent = selectionInfo?.text ?? activeDoc?.content ?? ''
+  const effectiveContent = selectionInfo?.text ?? ''
 
-  const isActionDisabled = (() => {
-    const text = selectionInfo ? selectionInfo.text.trim() : (() => {
-      try {
-        const doc = JSON.parse(activeDoc?.content || '{}')
-        if (!doc.content) return ''
-        return doc.content.map((n: any) => n.content?.map((c: any) => c.text || '').join('')).join('').trim()
-      } catch { return '' }
-    })()
-    return text.length < 3
-  })()
+  const isActionDisabled = !selectionInfo || selectionInfo.text.trim().length < 3
 
-  const buildChanges = (originalJson: string, resultText: string, action: string, insertAt?: number): Change[] => {
+  const buildChanges = (originalJson: string, resultText: string, action: string, _insertAt?: number): Change[] => {
     if (action === 'polish') {
+      if (!selectionInfo) return []
       const paragraphTexts = extractTextFromDoc(originalJson)
-      const originalFull = paragraphTexts.join('\n').trim()
+      const originalFull = paragraphTexts.slice(selectionInfo.startPara, selectionInfo.endPara + 1).join('\n').trim()
       const newFull = resultText.trim()
       if (!newFull || originalFull.toLowerCase() === newFull.toLowerCase() || !originalFull) return []
       return [{
@@ -92,11 +84,12 @@ export default function DocumentWorkshop() {
         originalText: originalFull,
         newText: newFull,
         status: 'pending',
-        selectionRange: selectionInfo ? { startPara: selectionInfo.startPara, endPara: selectionInfo.endPara } : null,
+        selectionRange: { startPara: selectionInfo.startPara, endPara: selectionInfo.endPara },
       }]
     }
 
-    return [{ id: 0, type: 'added', originalText: '', newText: resultText.trim(), status: 'pending', insertAfterIndex: insertAt }]
+    const insertAfterIdx = selectionInfo ? selectionInfo.endPara : undefined
+    return [{ id: 0, type: 'added', originalText: '', newText: resultText.trim(), status: 'pending', insertAfterIndex: insertAfterIdx }]
   }
 
   const getOriginalDoc = () => {
