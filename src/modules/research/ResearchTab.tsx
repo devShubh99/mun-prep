@@ -279,7 +279,7 @@ export default function ResearchTab() {
                     if (isRedLine) {
                       return <div key={ii} className="mb-3">
                         <div className="flex items-center gap-2 mb-2"><Ban className="w-3.5 h-3.5 text-error" /><span className="text-xs font-[500] text-error uppercase tracking-wide">DO NOT CROSS</span></div>
-                        {item.list?.map((l, li) => <div key={li} className="flex items-start gap-2 py-1.5 px-3 bg-error/5 rounded-lg mb-1"><span className="text-error shrink-0 mt-0.5">\u2716</span><span className="text-sm text-body">{l}</span></div>)}
+                        {item.list?.map((l, li) => <div key={li} className="flex items-start gap-2 py-1.5 px-3 bg-error/5 rounded-lg mb-1"><span className="text-error shrink-0 mt-0.5">{'\u2716'}</span><span className="text-sm text-body">{l}</span></div>)}
                         {item.content && <p className="text-sm text-body mt-1">{item.content}</p>}
                       </div>
                     }
