@@ -2,63 +2,52 @@ import { callDeepSeek, send, sendError, readBody } from './_shared.js'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const SYSTEM_PROMPT = (country: string, committee: string, topic: string) =>
-  `You are an expert Model United Nations research agent. Your task is to conduct comprehensive research for a delegate representing ${country} in a Model United Nations conference.
+  `You are an expert MUN research agent. Research ${country} for ${committee} on "${topic || 'general topics'}".
 
 Generate JSON matching this schema exactly:
 {
+  "role": "string describing this country's UN role (e.g., P5 Permanent Member, Elected Member, Observer, etc.)",
+  "statChips": [
+    { "icon": "users", "label": "Population", "value": "string" },
+    { "icon": "dollar-sign", "label": "GDP", "value": "string" },
+    { "icon": "trending-down", "label": "Unemployment", "value": "string" },
+    { "icon": "bar-chart", "label": "HDI", "value": "string" },
+    { "icon": "landmark", "label": "Government", "value": "string" }
+  ],
   "sections": [
     {
       "title": "Country Profile",
+      "confidence": "high|medium|low",
       "items": [
         { "label": "Government Structure", "content": "...", "list": [] },
         { "label": "Key Economic Indicators", "content": "...", "list": [] }
       ]
     }
+  ],
+  "votingRecord": [
+    { "topic": "Resolution name", "yes": true, "no": false, "abstain": false, "coSponsor": true }
+  ],
+  "bilateralRelations": [
+    { "country": "Country name", "summary": "2-3 sentence summary", "type": "Partner|Rival|Complex|Neutral" }
+  ],
+  "allyBubbles": [
+    { "name": "Country name", "group": "ally|opponent|swing", "importance": "large|medium|small" }
   ]
 }
 
-Research and compile the following sections:
+Research these 6 sections (fill sections[]):
+1. "Country Profile" — government, economy, demographics, recent news. confidence: high
+2. "Foreign Policy & Alliances" — doctrine, bilaterals, major powers, UN stance. confidence: high
+3. "Committee-Specific Research" — position, votes, domestic relevance, key arguments. confidence: medium
+4. "Historical Context" — UN history, conflicts, treaties. confidence: medium
+5. "Bloc Alignment" — allies, opponents, swing states. confidence: medium. Also populate allyBubbles with 8-12 countries.
+6. "Delegate Toolkit" — speech points (as list), amendments (as list), red lines (as list), working paper allies (as list). confidence: low
 
-Section 1: "Country Profile"
-- Government structure, current leadership, and political stability
-- Key economic indicators (GDP, major industries, unemployment, poverty rate)
-- Demographics, ethnic groups, and official/spoken languages
-- Recent major news or developments (last 12 months)
-
-Section 2: "Foreign Policy & Alliances"
-- ${country}'s foreign policy priorities and doctrine
-- Key bilateral relationships and regional alliances
-- Relationship with major powers (USA, China, UK, Russia)
-- Stance on multilateralism and the United Nations
-
-Section 3: "Committee-Specific Research"
-- Committee: ${committee}
-${topic ? `- Topic: ${topic}` : ''}
-- ${country}'s official position or voting history on this topic
-- Any resolutions ${country} has co-sponsored related to this topic
-- Domestic relevance of this topic to ${country}
-- Key arguments ${country} would likely make on the floor
-
-Section 4: "Historical Context"
-- ${country}'s history with the UN (peacekeeping, aid, partnerships)
-- Past conflicts or crises and their lasting impact on foreign policy
-- Any international agreements or treaties ${country} has signed relevant to this topic
-
-Section 5: "Bloc Alignment"
-- Which country blocs ${country} typically aligns with
-- Potential allies on this specific committee topic
-- Countries ${country} may oppose and why
-
-Section 6: "Delegate Toolkit"
-- An array of 3-5 strong opening speech talking points under label "Opening Speech Talking Points" with each as a list item
-- Likely amendments or clauses under "Likely Amendments"
-- Red lines under "Red Lines" with each as a list item
-- 5 potential working paper allies under "Working Paper Allies" with each as a list item
-
-Each item can have a "list" field containing bullet points. If no list is needed, set it to an empty array.
-Use credible sources: UN databases, government websites, BBC, Reuters,
-Council on Foreign Relations, and academic sources.
-Cite sources inline within the content field.`
+Populate statChips with real data.
+Populate votingRecord with 4-5 realistic past resolutions.
+Populate bilateralRelations with 4 key countries.
+Each item's "list" field should contain bullet points when appropriate, empty array otherwise.
+Cite sources inline within content fields.`
 
 export default async (req: IncomingMessage, res: ServerResponse) => {
   if (req.method !== 'POST') return sendError(res, 'Method not allowed', 405)

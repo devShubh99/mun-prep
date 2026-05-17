@@ -39,10 +39,45 @@ export interface ResearchItem {
 export interface ResearchSection {
   title: string
   items: ResearchItem[]
+  confidence?: 'high' | 'medium' | 'low'
+}
+
+export interface StatChip {
+  icon: string
+  label: string
+  value: string
+}
+
+export interface VotingRow {
+  topic: string
+  yes: boolean
+  no: boolean
+  abstain: boolean
+  coSponsor: boolean
+}
+
+export interface BilateralRelation {
+  country: string
+  summary: string
+  type: 'Partner' | 'Rival' | 'Complex' | 'Neutral'
+}
+
+export interface AllyBubble {
+  name: string
+  group: 'ally' | 'opponent' | 'swing'
+  importance: 'large' | 'medium' | 'small'
 }
 
 export interface ResearchJson {
+  country: string
+  committee: string
+  topic: string
+  role: string
+  statChips: StatChip[]
   sections: ResearchSection[]
+  votingRecord: VotingRow[]
+  bilateralRelations: BilateralRelation[]
+  allyBubbles: AllyBubble[]
   _generatedFor?: { country: string; committee: string; topic: string }
 }
 

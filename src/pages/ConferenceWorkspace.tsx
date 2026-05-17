@@ -28,11 +28,11 @@ export default function ConferenceWorkspace() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-2 no-print">
         <h1 className="font-serif text-[22px] font-[400] text-ink">{conference.name}</h1>
         <span className="text-sm text-muted">— {conference.assigned_country}</span>
       </div>
-      <div className="flex gap-1 mb-8 border-b border-hairline overflow-x-auto">
+      <div className="flex gap-1 mb-8 border-b border-hairline overflow-x-auto no-print">
         {TABS.map(tab => (
           <NavLink
             key={tab.path}
