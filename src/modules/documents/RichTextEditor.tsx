@@ -84,7 +84,7 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
         onCursorParagraph?.(cursorIdx)
         if (onSelection && !ed.state.selection.empty) {
           const text = ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to).trim()
-          if (text.length >= 3) onSelection({ text, startPara: resolveBlockIdx(ed.state.selection.from), endPara: resolveBlockIdx(ed.state.selection.to) })
+          if (text.length >= 3) onSelection({ text, startPara: resolveBlockIdx(ed.state.selection.from), endPara: resolveBlockIdx(Math.max(ed.state.selection.to - 1, ed.state.selection.from)) })
           else onSelection(null)
         } else if (onSelection) onSelection(null)
       }
