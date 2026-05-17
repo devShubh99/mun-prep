@@ -32,7 +32,7 @@ export function generateCheatSheet(params: {
 export function generateResearch(params: {
   country: string; committee: string; topic: string
 }, signal?: AbortSignal) {
-  return request<{ content: string }>('/generate-research', params, signal)
+  return request<{ sections: { title: string; items: { label: string; content: string; list?: string[] }[] }[] }>('/generate-research', params, signal)
 }
 
 export function researchChat(params: {

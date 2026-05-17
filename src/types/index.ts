@@ -30,8 +30,19 @@ export interface CheatSheetJson {
   strategyNotes: string
 }
 
-export interface ResearchJson {
+export interface ResearchItem {
+  label: string
   content: string
+  list?: string[]
+}
+
+export interface ResearchSection {
+  title: string
+  items: ResearchItem[]
+}
+
+export interface ResearchJson {
+  sections: ResearchSection[]
   _generatedFor?: { country: string; committee: string; topic: string }
 }
 

@@ -3,9 +3,22 @@ import { useConference } from '../../hooks/useConference'
 import { generateResearch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import ResearchChat from './ResearchChat'
-import { Search, Copy } from 'lucide-react'
+import { Search, Copy, Check } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
-import DOMPurify from 'dompurify'
+
+
+function CopyBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
+      className="text-muted-soft hover:text-primary transition-colors p-1"
+      title="Copy section"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  )
+}
 
 export default function ResearchTab() {
   const { conference, updateConference, tasks, setTask } = useConference()
@@ -42,7 +55,7 @@ export default function ResearchTab() {
       }, controller.signal)
       const err = await updateConference({
         research_data: {
-          content: data.content,
+          sections: data.sections,
           _generatedFor: { country: conference.assigned_country, committee: conference.committee, topic: conference.topic },
         },
       })
@@ -59,17 +72,15 @@ export default function ResearchTab() {
   const handleCopyToDocuments = async () => {
     if (!conference || !conference.research_data) return
     setError(null)
+    const text = conference.research_data.sections
+      ?.map(s => `## ${s.title}\n\n${s.items.map(i => `### ${i.label}\n${i.content}${i.list ? '\n' + i.list.map(l => `- ${l}`).join('\n') : ''}`).join('\n\n')}`)
+      .join('\n\n') || ''
     const { error: err } = await supabase.from('documents').insert({
       conference_id: conference.id,
-      title: `Research – ${conference.assigned_country} – ${conference.topic}`,
+      title: `Research \u2013 ${conference.assigned_country} \u2013 ${conference.topic}`,
       content: JSON.stringify({
         type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            content: [{ type: 'text', text: conference.research_data.content.replace(/<[^>]*>/g, '') }],
-          },
-        ],
+        content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
       }),
       archived: false,
     })
@@ -78,7 +89,7 @@ export default function ResearchTab() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const researchContent = conference?.research_data?.content
+  const sections = conference?.research_data?.sections
   const gen = conference?.research_data?._generatedFor
   const stale = gen && (gen.country !== conference?.assigned_country || gen.committee !== conference?.committee || gen.topic !== conference?.topic)
 
@@ -93,7 +104,7 @@ export default function ResearchTab() {
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}
       {(generating || tasks['research']) && <div className="mb-4"><ProgressBar /></div>}
-      {!researchContent ? (
+      {!sections ? (
         <div className="card text-center">
           <p className="text-body mb-4">
             Generate a comprehensive research briefing for {conference?.assigned_country} on {conference?.topic}.
@@ -107,7 +118,7 @@ export default function ResearchTab() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-[22px] font-[400] tracking-[-0.3px] text-ink">
-              Research Briefing — {conference?.assigned_country}
+              Research Briefing \u2014 {conference?.assigned_country}
             </h2>
             <div className="flex gap-2">
               <button onClick={handleCopyToDocuments} className="btn-secondary">
@@ -121,10 +132,34 @@ export default function ResearchTab() {
             </div>
           </div>
 
-          <div
-            className="card-light prose prose-sm max-w-none [&_h2]:font-serif [&_h2]:text-[22px] [&_h2]:font-[400] [&_h2]:tracking-[-0.3px] [&_h2]:text-ink [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:font-[500] [&_h3]:text-body [&_h3]:mt-4 [&_h3]:mb-2 [&_ul]:text-body [&_p]:text-body"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(researchContent) }}
-          />
+          <div className="space-y-6">
+            {sections.map((section, si) => (
+              <section key={si}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="font-serif text-[20px] font-[400] text-ink">{section.title}</h3>
+                  <CopyBtn text={section.items.map(i => `### ${i.label}\n${i.content}${i.list ? '\n' + i.list.map(l => `- ${l}`).join('\n') : ''}`).join('\n\n')} />
+                </div>
+                <div className="space-y-3">
+                  {section.items.map((item, ii) => (
+                    <div key={ii} className="bg-surface-soft/50 rounded-xl px-4 py-3 border-l-4 border-l-primary/40">
+                      <h4 className="text-xs font-[500] text-muted uppercase tracking-wide mb-1">{item.label}</h4>
+                      <p className="text-sm text-body whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                      {item.list && item.list.length > 0 && (
+                        <ul className="mt-2 space-y-1">
+                          {item.list.map((li, liIdx) => (
+                            <li key={liIdx} className="text-sm text-body flex items-start gap-2">
+                              <span className="text-primary mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                              {li}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
 
           <div className="mt-8">
             <ResearchChat />

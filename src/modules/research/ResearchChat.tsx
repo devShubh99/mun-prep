@@ -75,7 +75,7 @@ export default function ResearchChat() {
 
     try {
       const { answer } = await researchChat({
-        researchContext: conference.research_data?.content || '',
+        researchContext: conference.research_data?.sections?.map(s => `${s.title}:\n${s.items.map(i => `${i.label}: ${i.content}${i.list ? '\n' + i.list.map(l => `- ${l}`).join('\n') : ''}`).join('\n')}`).join('\n\n') || '',
         question: text,
       }, controller.signal)
       setResearchChatDraft({ question: text, answer })
