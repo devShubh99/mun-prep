@@ -1,14 +1,17 @@
+import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Settings, Globe } from 'lucide-react'
+import { Settings, Globe, Loader } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useConference } from '../hooks/useConference'
 
 export default function Layout() {
   const { pathname } = useLocation()
   const { user } = useAuth()
-  const { conference } = useConference()
+  const { conference, tasks } = useConference()
+  const [showTasks, setShowTasks] = useState(false)
 
   const showBreadcrumb = pathname.startsWith('/conference/') && conference
+  const activeTasks = Object.entries(tasks).filter(([, label]) => label !== null) as [string, string][]
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -38,6 +41,28 @@ export default function Layout() {
       <main id="main-content" className="max-w-content mx-auto px-6 py-section">
         <Outlet />
       </main>
+
+      {activeTasks.length > 0 && (
+        <div className="fixed bottom-4 left-4 z-50">
+          <button
+            onClick={() => setShowTasks(!showTasks)}
+            className="bg-surface-dark text-on-dark rounded-full px-3 py-1.5 text-xs shadow-lg flex items-center gap-1.5 hover:bg-surface-dark-elevated transition-colors"
+          >
+            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+            {activeTasks.length} running
+          </button>
+          {showTasks && (
+            <div className="absolute bottom-full mb-2 left-0 bg-surface-dark rounded-xl p-3 shadow-lg min-w-[180px]">
+              {activeTasks.map(([key, label]) => (
+                <div key={key} className="flex items-center gap-2 py-1 text-xs text-on-dark">
+                  <Loader className="w-3 h-3 text-primary animate-spin shrink-0" />
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

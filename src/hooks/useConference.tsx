@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import type { Conference } from '../types'
+import type { Conference, DebateFeedback } from '../types'
 
 interface ConferenceContextValue {
   conference: Conference | null
@@ -20,6 +20,8 @@ interface ConferenceContextValue {
   activeConferenceId: string | null
   tasks: Record<string, string | null>
   setTask: (key: string, label: string | null) => void
+  debateDraft: { question: string | null; answer: string; evaluation: DebateFeedback | null } | null
+  setDebateDraft: (draft: { question: string | null; answer: string; evaluation: DebateFeedback | null } | null) => void
 }
 
 const ConferenceContext = createContext<ConferenceContextValue | null>(null)
@@ -35,6 +37,7 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
   const setTask = useCallback((key: string, label: string | null) => {
     setTasks(prev => ({ ...prev, [key]: label }))
   }, [])
+  const [debateDraft, setDebateDraft] = useState<{ question: string | null; answer: string; evaluation: DebateFeedback | null } | null>(null)
 
   const fetchConferences = useCallback(async () => {
     if (!user) {
@@ -125,11 +128,11 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     updateConference, createConference, archiveConference, restoreConference,
     permanentlyDeleteConference, deleteConference,
     setActiveConferenceId, activeConferenceId,
-    tasks, setTask,
+    tasks, setTask, debateDraft, setDebateDraft,
   }), [conference, loading, conferenceError, conferences, archivedConferences,
       fetchConferences, updateConference, createConference,
       archiveConference, restoreConference, permanentlyDeleteConference,
-      deleteConference, activeConferenceId, tasks, setTask])
+      deleteConference, activeConferenceId, tasks, setTask, debateDraft, setDebateDraft])
 
   return (
     <ConferenceContext.Provider value={value}>

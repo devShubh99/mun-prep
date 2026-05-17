@@ -31,7 +31,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 export default function DebateSimulator() {
-  const { conference, setTask } = useConference()
+  const { conference, setTask, debateDraft, setDebateDraft } = useConference()
   const [difficulty, setDifficulty] = useState('easy')
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
   const [answer, setAnswer] = useState('')
@@ -45,6 +45,24 @@ export default function DebateSimulator() {
   const [submittedAnswers, setSubmittedAnswers] = useState<Set<string>>(new Set())
 
   const currentLevel = DIFFICULTY_LEVELS.find(l => l.difficulty === difficulty)
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (debateDraft) {
+      setCurrentQuestion(debateDraft.question)
+      setAnswer(debateDraft.answer)
+      setCurrentEval(debateDraft.evaluation)
+    }
+  }, [])
+
+  // Save draft on unmount
+  useEffect(() => {
+    return () => {
+      if (currentQuestion || answer || currentEval) {
+        setDebateDraft({ question: currentQuestion, answer, evaluation: currentEval })
+      }
+    }
+  }, [currentQuestion, answer, currentEval])
 
   useEffect(() => {
     if (!conference) return
@@ -75,6 +93,7 @@ export default function DebateSimulator() {
     setSubmittedAnswers(new Set())
     setLoading(true)
     setError(null)
+    setDebateDraft(null)
     setTask('debate', 'Posing question\u2026')
     try {
       const { question } = await generateQuestion({
