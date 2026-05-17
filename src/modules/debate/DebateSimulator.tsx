@@ -233,6 +233,33 @@ export default function DebateSimulator() {
         </button>
       </div>
 
+      {!currentQuestion && history.length === 0 && !loading && (
+        <div className="card text-center py-12">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="font-serif text-[22px] text-ink mb-2">Practice Makes Perfect</h2>
+          <p className="text-muted text-sm mb-6 max-w-md mx-auto">
+            Prepare for {conference?.assigned_country || 'your country'} by practicing with AI-generated debate questions.
+          </p>
+          <div className="text-left max-w-xs mx-auto space-y-3 mb-6">
+            <div className="flex items-start gap-3 text-sm text-body">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-[500] flex items-center justify-center shrink-0">1</span>
+              <span>Click <strong>Ask Question</strong> above to get a debate question tailored to your committee and difficulty level.</span>
+            </div>
+            <div className="flex items-start gap-3 text-sm text-body">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-[500] flex items-center justify-center shrink-0">2</span>
+              <span>Type your answer and submit — the AI will score your argument and diplomacy.</span>
+            </div>
+            <div className="flex items-start gap-3 text-sm text-body">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-[500] flex items-center justify-center shrink-0">3</span>
+              <span>Review detailed feedback and track your improvement across sessions.</span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-soft">Choose a difficulty level above to get started.</p>
+        </div>
+      )}
+
       {currentQuestion && (
         <QuestionDisplay
           question={currentQuestion}
