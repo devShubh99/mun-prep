@@ -103,7 +103,22 @@ export function applyChanges(
     // changed type — replace with AI text
     const newLines = change.newText.split('\n').filter(l => l.trim())
     if (newLines.length === 0) continue
-    const newParas = newLines.map(line => makePara(line))
+
+    let origRefs: any[] = []
+    if (change.selectionRange) {
+      const { startPara, endPara } = change.selectionRange
+      origRefs = doc.content.slice(startPara, endPara + 1)
+    } else {
+      origRefs = [doc.content[change.id]].filter(Boolean)
+    }
+
+    const newParas = newLines.map((line, i) => {
+      const ref = i < origRefs.length ? origRefs[i] : origRefs[origRefs.length - 1]
+      if (ref) {
+        return { type: ref.type || 'paragraph', attrs: { ...ref.attrs }, content: [{ type: 'text', text: line }] }
+      }
+      return makePara(line)
+    })
 
     if (change.selectionRange) {
       const { startPara, endPara } = change.selectionRange

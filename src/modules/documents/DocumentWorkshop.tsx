@@ -71,7 +71,8 @@ export default function DocumentWorkshop() {
 
   const isActionDisabled = !selectionInfo || selectionInfo.text.trim().length < 3
 
-  const buildChanges = (originalJson: string, resultText: string, action: string, _insertAt?: number): Change[] => {
+  const buildChanges = (originalJson: string, rawText: string, action: string, _insertAt?: number): Change[] => {
+    const resultText = rawText.replace(/\*+/g, '').trim()
     if (action === 'polish') {
       if (!selectionInfo) return []
       const paragraphTexts = extractTextFromDoc(originalJson)
