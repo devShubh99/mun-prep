@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConference } from '../hooks/useConference'
-import { Plus, Search, Trash2, Globe, Edit2 } from 'lucide-react'
+import { Plus, Search, Trash2, Globe, Edit2, Archive, RotateCcw } from 'lucide-react'
 import { DashboardSkeleton } from '../components/Skeleton'
 
 const COUNTRIES = [
@@ -174,7 +174,8 @@ function Autocomplete({ id, value, onChange, options, placeholder, required }: {
 }
 
 export default function Dashboard() {
-  const { conferences, createConference, deleteConference, updateConference, loading, conferenceError } = useConference()
+  // TEST BUILD: Dashboard archive flow — archive button on cards, restore/permanent-delete in archived section
+  const { conferences, archivedConferences, createConference, archiveConference, restoreConference, permanentlyDeleteConference, updateConference, loading, conferenceError } = useConference()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -375,12 +376,8 @@ export default function Dashboard() {
                   <button onClick={() => openEdit(c)} className="btn-ghost p-1 text-muted hover:text-ink" title="Edit">
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => {
-                    if (window.confirm(`Permanently delete "${c.name}"? This will delete all associated documents, debate history, and research. This cannot be undone.`)) {
-                      deleteConference(c.id)
-                    }
-                  }} className="btn-ghost p-1 text-muted hover:text-error" title="Delete">
-                    <Trash2 className="w-3.5 h-3.5" />
+                  <button onClick={() => archiveConference(c.id)} className="btn-ghost p-1 text-muted hover:text-ink" title="Archive">
+                    <Archive className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -399,6 +396,34 @@ export default function Dashboard() {
           ))}
         </div>
       ) : null}
+
+      {archivedConferences.length > 0 && (
+        <div className="mt-8 p-4 bg-surface-soft/50 rounded-xl">
+          <h3 className="font-[500] text-sm text-muted mb-3">Archived Conferences ({archivedConferences.length})</h3>
+          <div className="space-y-2">
+            {archivedConferences.map(c => (
+              <div key={c.id} className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-canvas border border-hairline">
+                <div>
+                  <span className="text-sm text-muted">{c.name}</span>
+                  <span className="text-xs text-muted-soft ml-2">{c.assigned_country} — {c.committee}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => restoreConference(c.id)} className="btn-ghost text-xs flex items-center gap-1">
+                    <RotateCcw className="w-3 h-3" /> Restore
+                  </button>
+                  <button onClick={() => {
+                    if (window.confirm(`Permanently delete "${c.name}"? This will delete all associated documents, debate history, and research. This cannot be undone.`)) {
+                      permanentlyDeleteConference(c.id)
+                    }
+                  }} className="btn-ghost text-xs flex items-center gap-1 text-error hover:text-error">
+                    <Trash2 className="w-3 h-3" /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {modal}
     </div>

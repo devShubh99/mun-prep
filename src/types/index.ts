@@ -9,6 +9,7 @@ export interface Conference {
   deadline: string | null
   cheat_sheet_data: CheatSheetJson | null
   research_data: ResearchJson | null
+  archived: boolean
   created_at: string
   updated_at: string
 }

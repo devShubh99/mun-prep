@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import RichTextEditor from './RichTextEditor'
 import AiActionButtons from './AiActionButtons'
-import { Plus, X, Archive, RotateCcw } from 'lucide-react'
+// TEST BUILD: Document archive — restore + permanent delete with confirmation
+import { Plus, X, Archive, RotateCcw, Trash2 } from 'lucide-react'
 import type { Document } from '../../types'
 
 function wordCount(content: string): number {
@@ -95,6 +96,14 @@ export default function DocumentWorkshop() {
       const remaining = docs.filter(d => d.id !== id)
       setActiveDocId(remaining.length > 0 ? remaining[0].id : null)
     }
+  }
+
+  const handlePermanentlyDeleteDoc = async (id: string, title: string) => {
+    if (!window.confirm(`Permanently delete "${title}"? This cannot be undone.`)) return
+    setError(null)
+    const { error: err } = await supabase.from('documents').delete().eq('id', id)
+    if (err) { setError(err.message); return }
+    setArchivedDocs(prev => prev.filter(d => d.id !== id))
   }
 
   const handleRestore = async (id: string) => {
@@ -188,9 +197,14 @@ export default function DocumentWorkshop() {
             {archivedDocs.map(doc => (
               <div key={doc.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-surface-soft transition-colors">
                 <span className="text-sm text-muted italic">{doc.title}</span>
-                <button onClick={() => handleRestore(doc.id)} className="btn-ghost text-xs flex items-center gap-1">
-                  <RotateCcw className="w-3 h-3" /> Restore
-                </button>
+                <div className="flex gap-1">
+                  <button onClick={() => handleRestore(doc.id)} className="btn-ghost text-xs flex items-center gap-1">
+                    <RotateCcw className="w-3 h-3" /> Restore
+                  </button>
+                  <button onClick={() => handlePermanentlyDeleteDoc(doc.id, doc.title)} className="btn-ghost text-xs flex items-center gap-1 text-error">
+                    <Trash2 className="w-3 h-3" /> Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

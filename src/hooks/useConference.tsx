@@ -8,9 +8,13 @@ interface ConferenceContextValue {
   loading: boolean
   conferenceError: string | null
   conferences: Conference[]
+  archivedConferences: Conference[]
   refreshConferences: () => Promise<void>
   updateConference: (partial: Partial<Conference>) => Promise<string | null>
   createConference: (data: Partial<Conference>) => Promise<Conference | null>
+  archiveConference: (id: string) => Promise<string | null>
+  restoreConference: (id: string) => Promise<string | null>
+  permanentlyDeleteConference: (id: string) => Promise<string | null>
   deleteConference: (id: string) => Promise<string | null>
   setActiveConferenceId: (id: string | null) => void
   activeConferenceId: string | null
@@ -21,6 +25,7 @@ const ConferenceContext = createContext<ConferenceContextValue | null>(null)
 export function ConferenceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [conferences, setConferences] = useState<Conference[]>([])
+  const [archivedConferences, setArchivedConferences] = useState<Conference[]>([])
   const [loading, setLoading] = useState(true)
   const [conferenceError, setConferenceError] = useState<string | null>(null)
   const [activeConferenceId, setActiveConferenceId] = useState<string | null>(null)
@@ -28,6 +33,7 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
   const fetchConferences = useCallback(async () => {
     if (!user) {
       setConferences([])
+      setArchivedConferences([])
       setLoading(false)
       return
     }
@@ -39,7 +45,10 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
     if (error) setConferenceError(error.message)
-    else if (data) setConferences(data as Conference[])
+    else if (data) {
+      setConferences((data as Conference[]).filter(c => !c.archived))
+      setArchivedConferences((data as Conference[]).filter(c => c.archived))
+    }
     setLoading(false)
   }, [user])
 
@@ -62,13 +71,39 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     if (!user) return null
     const { data: inserted, error } = await supabase
       .from('conferences')
-      .insert({ ...data, user_id: user.id })
+      .insert({ ...data, user_id: user.id, archived: false })
       .select()
       .single()
     if (error || !inserted) return null
     setConferences(prev => [inserted as Conference, ...prev])
     return inserted as Conference
   }, [user])
+
+  const archiveConference = useCallback(async (id: string): Promise<string | null> => {
+    const { error } = await supabase.from('conferences').update({ archived: true }).eq('id', id)
+    if (error) return error.message
+    setConferences(prev => prev.filter(c => c.id !== id))
+    setArchivedConferences(prev => [...prev, conferences.find(c => c.id === id)!])
+    if (activeConferenceId === id) setActiveConferenceId(null)
+    return null
+  }, [activeConferenceId, conferences])
+
+  const restoreConference = useCallback(async (id: string): Promise<string | null> => {
+    const { error } = await supabase.from('conferences').update({ archived: false }).eq('id', id)
+    if (error) return error.message
+    setArchivedConferences(prev => prev.filter(c => c.id !== id))
+    const restored = archivedConferences.find(c => c.id === id)
+    if (restored) setConferences(prev => [{ ...restored, archived: false }, ...prev])
+    return null
+  }, [archivedConferences])
+
+  const permanentlyDeleteConference = useCallback(async (id: string): Promise<string | null> => {
+    const { error } = await supabase.from('conferences').delete().eq('id', id)
+    if (error) return error.message
+    setArchivedConferences(prev => prev.filter(c => c.id !== id))
+    if (activeConferenceId === id) setActiveConferenceId(null)
+    return null
+  }, [activeConferenceId])
 
   const deleteConference = useCallback(async (id: string): Promise<string | null> => {
     const { error } = await supabase.from('conferences').delete().eq('id', id)
@@ -79,10 +114,15 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
   }, [activeConferenceId])
 
   const value = useMemo(() => ({
-    conference, loading, conferenceError, conferences, refreshConferences: fetchConferences,
-    updateConference, createConference, deleteConference,
+    conference, loading, conferenceError, conferences, archivedConferences,
+    refreshConferences: fetchConferences,
+    updateConference, createConference, archiveConference, restoreConference,
+    permanentlyDeleteConference, deleteConference,
     setActiveConferenceId, activeConferenceId,
-  }), [conference, loading, conferenceError, conferences, fetchConferences, updateConference, createConference, deleteConference, activeConferenceId])
+  }), [conference, loading, conferenceError, conferences, archivedConferences,
+      fetchConferences, updateConference, createConference,
+      archiveConference, restoreConference, permanentlyDeleteConference,
+      deleteConference, activeConferenceId])
 
   return (
     <ConferenceContext.Provider value={value}>
