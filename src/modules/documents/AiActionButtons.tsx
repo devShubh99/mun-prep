@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { documentAi } from '../../lib/api'
 import { useConference } from '../../hooks/useConference'
 import { Wand2, Scissors, Lightbulb, FilePlus } from 'lucide-react'
@@ -19,7 +19,12 @@ const ACTIONS = [
 ]
 
 export default function AiActionButtons({ content, documentType, onPreview, disabled }: Props) {
-  const { tasks, setTask } = useConference()
+  const { tasks, setTask, setDocumentDraft } = useConference()
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    return () => abortRef.current?.abort()
+  }, [])
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,11 +39,16 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
     setLoadingAction(action)
     setError(null)
     setTask('documents', actionLabels[action] || 'Processing\u2026')
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
-      const { result } = await documentAi({ action, documentType, content })
+      const { result } = await documentAi({ action, documentType, content }, controller.signal)
       if (!result) throw new Error('AI returned empty response')
+      setDocumentDraft({ content: result, action })
       onPreview(result, action)
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setError(e?.message || 'Action failed')
     } finally {
       setLoadingAction(null)

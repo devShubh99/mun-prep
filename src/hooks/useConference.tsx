@@ -22,6 +22,10 @@ interface ConferenceContextValue {
   setTask: (key: string, label: string | null) => void
   debateDraft: { question: string | null; answer: string; evaluation: DebateFeedback | null } | null
   setDebateDraft: (draft: { question: string | null; answer: string; evaluation: DebateFeedback | null } | null) => void
+  researchChatDraft: { question: string; answer: string } | null
+  setResearchChatDraft: (draft: { question: string; answer: string } | null) => void
+  documentDraft: { content: string; action: string } | null
+  setDocumentDraft: (draft: { content: string; action: string } | null) => void
 }
 
 const ConferenceContext = createContext<ConferenceContextValue | null>(null)
@@ -38,6 +42,8 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     setTasks(prev => ({ ...prev, [key]: label }))
   }, [])
   const [debateDraft, setDebateDraft] = useState<{ question: string | null; answer: string; evaluation: DebateFeedback | null } | null>(null)
+  const [researchChatDraft, setResearchChatDraft] = useState<{ question: string; answer: string } | null>(null)
+  const [documentDraft, setDocumentDraft] = useState<{ content: string; action: string } | null>(null)
 
   const fetchConferences = useCallback(async () => {
     if (!user) {
@@ -128,11 +134,11 @@ export function ConferenceProvider({ children }: { children: ReactNode }) {
     updateConference, createConference, archiveConference, restoreConference,
     permanentlyDeleteConference, deleteConference,
     setActiveConferenceId, activeConferenceId,
-    tasks, setTask, debateDraft, setDebateDraft,
+    tasks, setTask, debateDraft, setDebateDraft, researchChatDraft, setResearchChatDraft, documentDraft, setDocumentDraft,
   }), [conference, loading, conferenceError, conferences, archivedConferences,
       fetchConferences, updateConference, createConference,
       archiveConference, restoreConference, permanentlyDeleteConference,
-      deleteConference, activeConferenceId, tasks, setTask, debateDraft, setDebateDraft])
+      deleteConference, activeConferenceId, tasks, setTask, debateDraft, setDebateDraft, researchChatDraft, setResearchChatDraft, documentDraft, setDocumentDraft])
 
   return (
     <ConferenceContext.Provider value={value}>

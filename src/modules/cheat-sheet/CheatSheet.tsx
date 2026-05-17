@@ -66,9 +66,14 @@ function alliesRegionData(allies: string[], opponents: string[]) {
 
 export default function CheatSheet() {
   const { conference, updateConference, tasks, setTask } = useConference()
+  const abortRef = useRef<AbortController | null>(null)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    return () => abortRef.current?.abort()
+  }, [])
 
   const cs = conference?.cheat_sheet_data
   const gen = cs?._generatedFor
@@ -78,19 +83,23 @@ export default function CheatSheet() {
     if (!conference) return
     setGenerating(true)
     setError(null)
-    setTask('cheat-sheet', 'Researching…')
+    setTask('cheat-sheet', 'Researching\u2026')
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       const data = await generateCheatSheet({
         country: conference.assigned_country,
         committee: conference.committee,
         topic: conference.topic,
         specialRole: conference.special_role || undefined,
-      })
+      }, controller.signal)
       const err = await updateConference({
         cheat_sheet_data: { ...(data as CheatSheetJson), _generatedFor: { country: conference.assigned_country, committee: conference.committee, topic: conference.topic } },
       })
       if (err) setError(err)
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setError(e?.message || 'Failed to generate cheat sheet')
     } finally {
       setGenerating(false)

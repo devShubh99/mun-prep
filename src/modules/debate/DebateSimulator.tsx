@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { supabase } from '../../lib/supabase'
 import { generateQuestion, evaluateAnswer } from '../../lib/api'
@@ -31,7 +31,8 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 export default function DebateSimulator() {
-  const { conference, setTask, debateDraft, setDebateDraft } = useConference()
+  const { conference, tasks, setTask, debateDraft, setDebateDraft } = useConference()
+  const abortRef = useRef<AbortController | null>(null)
   const [difficulty, setDifficulty] = useState('easy')
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
   const [answer, setAnswer] = useState('')
@@ -55,14 +56,10 @@ export default function DebateSimulator() {
     }
   }, [])
 
-  // Save draft on unmount
+  // Abort API on unmount
   useEffect(() => {
-    return () => {
-      if (currentQuestion || answer || currentEval) {
-        setDebateDraft({ question: currentQuestion, answer, evaluation: currentEval })
-      }
-    }
-  }, [currentQuestion, answer, currentEval])
+    return () => abortRef.current?.abort()
+  }, [])
 
   useEffect(() => {
     if (!conference) return
@@ -95,6 +92,9 @@ export default function DebateSimulator() {
     setError(null)
     setDebateDraft(null)
     setTask('debate', 'Posing question\u2026')
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       const { question } = await generateQuestion({
         country: conference.assigned_country,
@@ -102,11 +102,13 @@ export default function DebateSimulator() {
         topic: conference.topic,
         difficulty: currentLevel.difficulty,
         role: currentLevel.role,
-      })
+      }, controller.signal)
       setCurrentQuestion(question)
       setAnswer('')
       setCurrentEval(null)
+      setDebateDraft({ question, answer: '', evaluation: null })
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setError(e?.message || 'Failed to generate question')
     } finally {
       setLoading(false)
@@ -124,6 +126,9 @@ export default function DebateSimulator() {
     setLoading(true)
     setError(null)
     setTask('debate', 'Scoring\u2026')
+    abortRef.current?.abort()
+    const controller2 = new AbortController()
+    abortRef.current = controller2
     try {
       const evaluation = await evaluateAnswer({
         question: currentQuestion,
@@ -133,8 +138,9 @@ export default function DebateSimulator() {
         topic: conference.topic,
         difficulty: currentLevel.difficulty,
         role: currentLevel.role,
-      })
+      }, controller2.signal)
       setCurrentEval(evaluation)
+      setDebateDraft({ question: currentQuestion, answer, evaluation })
       setSubmittedAnswers(prev => new Set(prev).add(answerKey))
 
       const { error: dbErr } = await supabase.from('debate_qa').insert({
@@ -156,6 +162,7 @@ export default function DebateSimulator() {
         setArchivedHistory((data as DebateQA[]).filter(e => e.archived))
       }
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setError(e?.message || 'Failed to evaluate answer')
     } finally {
       setLoading(false)
@@ -214,7 +221,7 @@ export default function DebateSimulator() {
       {error && (
         <div className="text-sm text-error bg-error/5 rounded-lg px-3 py-2 mb-4">{error}</div>
       )}
-      {loading && <div className="mb-4"><ProgressBar /></div>}
+      {(loading || tasks['debate']) && <div className="mb-4"><ProgressBar /></div>}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <label htmlFor="debate-difficulty" className="text-sm font-[500] text-body">Difficulty:</label>
         <select id="debate-difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value)} className="input w-auto">

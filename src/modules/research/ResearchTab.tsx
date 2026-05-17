@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useConference } from '../../hooks/useConference'
 import { generateResearch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
@@ -9,9 +9,14 @@ import DOMPurify from 'dompurify'
 
 export default function ResearchTab() {
   const { conference, updateConference, tasks, setTask } = useConference()
+  const abortRef = useRef<AbortController | null>(null)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => abortRef.current?.abort()
+  }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -25,13 +30,16 @@ export default function ResearchTab() {
     if (!conference) return
     setGenerating(true)
     setError(null)
-    setTask('research', 'Researching…')
+    setTask('research', 'Researching\u2026')
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       const data = await generateResearch({
         country: conference.assigned_country,
         committee: conference.committee,
         topic: conference.topic,
-      })
+      }, controller.signal)
       const err = await updateConference({
         research_data: {
           content: data.content,
@@ -40,6 +48,7 @@ export default function ResearchTab() {
       })
       if (err) setError(err)
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setError(e?.message || 'Failed to generate research')
     } finally {
       setGenerating(false)

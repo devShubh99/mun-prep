@@ -21,8 +21,9 @@ function CopyMsg({ text }: { text: string }) {
 }
 
 export default function ResearchChat() {
-  const { conference, setTask } = useConference()
+  const { conference, setTask, setResearchChatDraft } = useConference()
   const { user } = useAuth()
+  const abortRef = useRef<AbortController | null>(null)
   const [messages, setMessages] = useState<ResearchChatMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -43,6 +44,11 @@ export default function ResearchChat() {
       })
   }, [conference?.id])
 
+  // Abort API on unmount
+  useEffect(() => {
+    return () => abortRef.current?.abort()
+  }, [])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -62,13 +68,17 @@ export default function ResearchChat() {
     }
     setMessages(prev => [...prev, userMsg])
     setSending(true)
-    setTask('research-chat', 'Answering…')
+    setTask('research-chat', 'Answering\u2026')
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
     try {
       const { answer } = await researchChat({
         researchContext: conference.research_data?.content || '',
         question: text,
-      })
+      }, controller.signal)
+      setResearchChatDraft({ question: text, answer })
       const assistantMsg: ResearchChatMessage = {
         id: crypto.randomUUID(),
         conference_id: conference.id,
@@ -81,6 +91,7 @@ export default function ResearchChat() {
       const { error: dbErr } = await supabase.from('research_chat_messages').insert([userMsg, assistantMsg])
       if (dbErr) setError(dbErr.message)
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setError(e?.message || 'Failed to get response')
     } finally {
       setSending(false)
