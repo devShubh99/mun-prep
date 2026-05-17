@@ -4,8 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import RichTextEditor from './RichTextEditor'
 import AiActionButtons from './AiActionButtons'
-// TEST BUILD: Document archive — restore + permanent delete with confirmation
-import { Plus, X, Archive, RotateCcw, Trash2, Check, XCircle } from 'lucide-react'
+import { Plus, X, Archive, RotateCcw, Trash2, XCircle, CheckCircle, CheckSquare, XSquare } from 'lucide-react'
 import type { Document } from '../../types'
 
 function wordCount(content: string): number {
@@ -14,6 +13,58 @@ function wordCount(content: string): number {
     const text = JSON.stringify(json).replace(/<[^>]*>/g, '').replace(/[{}"\[\]\\]/g, ' ').trim()
     return text.split(/\s+/).filter(Boolean).length
   } catch { return 0 }
+}
+
+function extractTextFromDoc(jsonStr: string): string[] {
+  try {
+    const doc = JSON.parse(jsonStr)
+    if (!doc?.content) return []
+    return doc.content
+      .filter((n: any) => n.type === 'paragraph')
+      .map((n: any) => n.content?.map((c: any) => c.text || '').join('') || '')
+      .filter((t: string) => t.trim())
+  } catch { return [] }
+}
+
+interface Suggestion {
+  id: number
+  type: 'changed' | 'added'
+  originalText: string
+  suggestedText: string
+  accepted: boolean | null
+}
+
+function buildSuggestions(originalJson: string, resultText: string, action: string): Suggestion[] {
+  const originals = extractTextFromDoc(originalJson)
+  const results = resultText.split('\n').filter(t => t.trim())
+
+  if (action === 'polish' || action === 'shorten') {
+    const suggestions: Suggestion[] = []
+    const maxLen = Math.max(originals.length, results.length)
+    for (let i = 0; i < maxLen; i++) {
+      const orig = originals[i] || ''
+      const suggested = results[i] || ''
+      if (orig.toLowerCase().trim() === suggested.toLowerCase().trim()) continue
+      if (!orig && !suggested) continue
+      suggestions.push({
+        id: i,
+        type: 'changed',
+        originalText: orig,
+        suggestedText: suggested,
+        accepted: null,
+      })
+    }
+    return suggestions
+  }
+
+  // Brainstorm / Insert clause — show as a single new paragraph
+  return [{
+    id: 0,
+    type: 'added',
+    originalText: '',
+    suggestedText: resultText,
+    accepted: null,
+  }]
 }
 
 export default function DocumentWorkshop() {
@@ -26,26 +77,71 @@ export default function DocumentWorkshop() {
   const [renameValue, setRenameValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [darkMode, setDarkMode] = useState(false)
-  const [preview, setPreview] = useState<{ content: string; action: string } | null>(null)
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [reviewAction, setReviewAction] = useState<string | null>(null)
 
   const activeDoc = docs.find(d => d.id === activeDocId)
+  const isReviewing = suggestions.length > 0
 
-  const handleApprovePreview = () => {
-    if (!preview || !activeDocId) return
-    if (preview.action === 'polish' || preview.action === 'shorten') {
-      handleContentChange(preview.content)
+  const handleAiResult = (resultText: string, action: string) => {
+    const built = buildSuggestions(activeDoc?.content || '{}', resultText, action)
+    if (built.length === 0) {
+      setError('AI returned no changes.')
+      return
+    }
+    setSuggestions(built)
+    setReviewAction(action)
+  }
+
+  const acceptSuggestion = (id: number) => {
+    setSuggestions(prev => prev.map(s => s.id === id ? { ...s, accepted: true } : s))
+  }
+
+  const rejectSuggestion = (id: number) => {
+    setSuggestions(prev => prev.map(s => s.id === id ? { ...s, accepted: false } : s))
+  }
+
+  const applyAll = () => {
+    if (!activeDocId || !activeDoc) return
+
+    if (reviewAction === 'polish' || reviewAction === 'shorten') {
+      const newParagraphs = suggestions
+        .sort((a, b) => a.id - b.id)
+        .map(s => ({
+          type: 'paragraph' as const,
+          content: [{ type: 'text' as const, text: s.accepted ? s.suggestedText : s.originalText }],
+        }))
+
+      const resultJson = JSON.stringify({ type: 'doc', content: newParagraphs })
+      handleContentChange(resultJson)
     } else {
+      // Append new content at the end
+      const acceptedText = suggestions
+        .filter(s => s.accepted !== false)
+        .map(s => s.suggestedText)
+        .join('\n')
       try {
-        const parsed = JSON.parse(activeDoc?.content || '{}')
+        const parsed = JSON.parse(activeDoc.content)
         parsed.content.push({
           type: 'paragraph',
-          content: [{ type: 'text', text: '\n' + preview.content }],
+          content: [{ type: 'text', text: '\n' + acceptedText }],
         })
         handleContentChange(JSON.stringify(parsed))
-      } catch { handleContentChange(preview.content) }
+      } catch { handleContentChange(activeDoc.content) }
     }
-    setPreview(null)
+
+    setSuggestions([])
+    setReviewAction(null)
   }
+
+  const dismissReview = () => {
+    setSuggestions([])
+    setReviewAction(null)
+  }
+
+  const pendingCount = suggestions.filter(s => s.accepted === null).length
+  const decidedCount = suggestions.filter(s => s.accepted !== null).length
+  const allDecided = pendingCount === 0 && suggestions.length > 0
 
   useEffect(() => {
     if (!conference) return
@@ -232,12 +328,12 @@ export default function DocumentWorkshop() {
         </div>
       )}
 
-      {activeDoc ? (
+      {activeDoc && !isReviewing ? (
         <div>
           <AiActionButtons
             content={activeDoc.content}
             documentType="general"
-            onPreview={(content, action) => setPreview({ content, action })}
+            onPreview={handleAiResult}
           />
           <div className="mt-4">
             <RichTextEditor
@@ -248,33 +344,68 @@ export default function DocumentWorkshop() {
             />
           </div>
         </div>
+      ) : activeDoc && isReviewing ? (
+        <div className="card-light">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-[500] text-sm text-body capitalize">{reviewAction} Review</h3>
+            <span className="text-xs text-muted">{decidedCount}/{suggestions.length} reviewed</span>
+          </div>
+          <div className="space-y-4">
+            {suggestions.map(s => (
+              <div key={s.id} className="border border-hairline rounded-lg overflow-hidden">
+                {s.type === 'added' && (
+                  <div className="px-4 py-2 bg-accent-amber/5 border-b border-hairline text-xs font-[500] text-accent-amber flex items-center gap-1">
+                    <span>🆕</span> New content to be appended
+                  </div>
+                )}
+                <div className="p-4 space-y-2">
+                  {s.originalText && (
+                    <div className="bg-error/5 rounded-lg p-3 border-l-4 border-l-error">
+                      <span className="text-xs font-[500] text-error mb-1 block">Original</span>
+                      <p className="text-sm text-body line-through decoration-error/50">{s.originalText}</p>
+                    </div>
+                  )}
+                  <div className="bg-success/5 rounded-lg p-3 border-l-4 border-l-success">
+                    <span className="text-xs font-[500] text-success mb-1 block">Suggestion</span>
+                    <p className="text-sm text-body">{s.suggestedText}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 px-4 pb-4">
+                  <button
+                    onClick={() => rejectSuggestion(s.id)}
+                    disabled={s.accepted !== null}
+                    className={`btn-ghost text-xs flex items-center gap-1 ${s.accepted === false ? 'text-error' : ''}`}
+                  >
+                    <XCircle className="w-3.5 h-3.5" /> {s.accepted === false ? 'Rejected' : 'Reject'}
+                  </button>
+                  <button
+                    onClick={() => acceptSuggestion(s.id)}
+                    disabled={s.accepted !== null}
+                    className={`btn-ghost text-xs flex items-center gap-1 ${s.accepted === true ? 'text-success' : ''}`}
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" /> {s.accepted === true ? 'Accepted' : 'Accept'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-hairline">
+            <button onClick={dismissReview} className="btn-secondary flex items-center gap-1">
+              <XSquare className="w-4 h-4" /> Discard All
+            </button>
+            <button
+              onClick={applyAll}
+              disabled={!allDecided}
+              className="btn-primary flex items-center gap-1"
+            >
+              <CheckSquare className="w-4 h-4" />
+              {allDecided ? `Apply (${decidedCount} changes)` : `Review remaining (${pendingCount})`}
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="card text-center">
           <p className="text-muted">No documents yet. Click <strong>+</strong> to create one.</p>
-        </div>
-      )}
-
-      {preview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setPreview(null)}>
-          <div className="bg-canvas rounded-xl border border-hairline p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h3 className="font-[500] text-sm text-body mb-1 capitalize">{preview.action} Result</h3>
-            <p className="text-xs text-muted-soft mb-4">
-              {preview.action === 'brainstorm' || preview.action === 'insert-clause'
-                ? 'This content will be appended at the end of your document.'
-                : 'This content will replace the current document text.'}
-            </p>
-            <div className="bg-white rounded-lg border border-hairline p-4 text-sm text-body whitespace-pre-wrap mb-4 max-h-60 overflow-y-auto">
-              {preview.content}
-            </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setPreview(null)} className="btn-secondary flex items-center gap-1">
-                <XCircle className="w-4 h-4" /> Deny
-              </button>
-              <button onClick={handleApprovePreview} className="btn-primary flex items-center gap-1">
-                <Check className="w-4 h-4" /> Approve
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
