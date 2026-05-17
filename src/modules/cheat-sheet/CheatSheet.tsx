@@ -17,11 +17,23 @@ const SECTIONS = [
   { id: 'strategy', label: 'Strategy & Q&A' },
 ]
 
-function CopyBtn({ text }: { text: string }) {
+function CopyBtn({ text, html }: { text: string; html?: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <button
-      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
+      onClick={async () => {
+        try {
+          if (html) {
+            await navigator.clipboard.write([new ClipboardItem({
+              'text/plain': new Blob([text], { type: 'text/plain' }),
+              'text/html': new Blob([html], { type: 'text/html' }),
+            })])
+          } else {
+            await navigator.clipboard.writeText(text)
+          }
+        } catch { await navigator.clipboard.writeText(text) }
+        setCopied(true); setTimeout(() => setCopied(false), 1500)
+      }}
       className="text-muted-soft hover:text-primary transition-colors p-1"
       title="Copy section"
     >
@@ -242,7 +254,7 @@ export default function CheatSheet() {
           <section id="cs-mandate" className="scroll-mt-24">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="font-serif text-[22px] font-[400] text-ink">Mandate</h2>
-              <CopyBtn text={cs.mandate} />
+              <CopyBtn text={cs.mandate} html={`<p>${cs.mandate}</p>`} />
             </div>
             <div className="bg-primary/5 rounded-xl px-4 py-3 border-l-4 border-l-primary">
               <p className="text-body text-sm whitespace-pre-wrap">{cs.mandate}</p>
@@ -253,10 +265,10 @@ export default function CheatSheet() {
           <section id="cs-coreDemands" className="scroll-mt-24">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="font-serif text-[22px] font-[400] text-ink">Core Demands</h2>
-              <CopyBtn text={cs.coreDemands.map((d, i) => `${i + 1}. ${d}`).join('\n')} />
-            </div>
-            <div className="space-y-2">
-              {cs.coreDemands.map((d, i) => (
+<CopyBtn text={cs.coreDemands.map((d, i) => `${i + 1}. ${d}`).join('\n')} html={`<ol style="list-style:none;padding:0">${cs.coreDemands.map((d, i) => `<li style="margin-bottom:8px;font-size:14px"><strong>${i + 1}.</strong> ${d}</li>`).join('')}</ol>`} />
+          </div>
+          <div className="space-y-2">
+            {cs.coreDemands.map((d, i) => (
                 <div key={i} className="bg-primary/5 rounded-xl px-4 py-3 border-l-4 border-l-primary flex items-start gap-3">
                   <span className="font-serif text-xl font-[400] text-primary leading-none mt-0.5 w-7 text-center shrink-0">{i + 1}</span>
                   <p className="text-body text-sm">{d}</p>
@@ -269,10 +281,10 @@ export default function CheatSheet() {
           <section id="cs-redLines" className="scroll-mt-24">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="font-serif text-[22px] font-[400] text-ink">Red Lines</h2>
-              <CopyBtn text={cs.redLines.map(r => `• ${r}`).join('\n')} />
-            </div>
-            <div className="space-y-2">
-              {cs.redLines.map((r, i) => (
+<CopyBtn text={cs.redLines.map(r => `• ${r}`).join('\n')} html={`<ul style="list-style:none;padding:0">${cs.redLines.map(r => `<li style="margin-bottom:8px;font-size:14px">⚠️ ${r}</li>`).join('')}</ul>`} />
+          </div>
+          <div className="space-y-2">
+            {cs.redLines.map((r, i) => (
                 <div key={i} className="bg-error/5 rounded-xl px-4 py-3 border-l-4 border-l-error flex items-start gap-3">
                   <span className="text-error shrink-0 mt-0.5">⚠️</span>
                   <p className="text-body text-sm">{r}</p>
@@ -285,7 +297,7 @@ export default function CheatSheet() {
           <section id="cs-alliesOpponents" className="scroll-mt-24">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="font-serif text-[22px] font-[400] text-ink">Allies &amp; Opponents</h2>
-              <CopyBtn text={`ALLIES:\n${cs.allies.map(a => `• ${a}`).join('\n')}\n\nOPPONENTS:\n${cs.opponents.map(o => `• ${o}`).join('\n')}`} />
+              <CopyBtn text={`ALLIES:\n${cs.allies.map(a => `• ${a}`).join('\n')}\n\nOPPONENTS:\n${cs.opponents.map(o => `• ${o}`).join('\n')}`} html={`<div style="display:flex;gap:20px"><div><h3 style="font-size:14px;color:#5db872">Allies</h3><ul style="list-style:none;padding:0">${cs.allies.map(a => `<li style="margin-bottom:4px;font-size:14px">${a}</li>`).join('')}</ul></div><div><h3 style="font-size:14px;color:#c64545">Opponents</h3><ul style="list-style:none;padding:0">${cs.opponents.map(o => `<li style="margin-bottom:4px;font-size:14px">${o}</li>`).join('')}</ul></div></div>`} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -345,7 +357,7 @@ export default function CheatSheet() {
           <section id="cs-votingRecord" className="scroll-mt-24">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="font-serif text-[22px] font-[400] text-ink">Voting Record</h2>
-              <CopyBtn text={cs.votingRecord} />
+              <CopyBtn text={cs.votingRecord} html={`<p style="font-size:14px">${cs.votingRecord}</p>`} />
             </div>
             <div className="bg-accent-teal/5 rounded-xl px-4 py-3 border-l-4 border-l-accent-teal">
               <p className="text-body text-sm whitespace-pre-wrap">{cs.votingRecord}</p>
@@ -356,10 +368,10 @@ export default function CheatSheet() {
           <section id="cs-draftClauses" className="scroll-mt-24">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="font-serif text-[22px] font-[400] text-ink">Draft Clauses</h2>
-              <CopyBtn text={cs.draftClauses.map((c, i) => `Clause ${i + 1}. ${c}`).join('\n')} />
-            </div>
-            <div className="space-y-2">
-              {cs.draftClauses.map((c, i) => (
+<CopyBtn text={cs.draftClauses.map((c, i) => `Clause ${i + 1}. ${c}`).join('\n')} html={`<ol style="list-style:none;padding:0">${cs.draftClauses.map((c, i) => `<li style="margin-bottom:8px;font-size:14px"><strong>Clause ${i + 1}.</strong> ${c}</li>`).join('')}</ol>`} />
+          </div>
+          <div className="space-y-2">
+            {cs.draftClauses.map((c, i) => (
                 <div key={i} className="bg-accent-amber/5 rounded-xl px-4 py-3 border-l-4 border-l-accent-amber flex items-start gap-3">
                   <span className="text-xs font-[500] text-accent-amber shrink-0 mt-0.5 min-w-[68px]">Clause {i + 1}</span>
                   <p className="text-body text-sm">{c}</p>
@@ -378,7 +390,7 @@ export default function CheatSheet() {
             <div className="rounded-xl px-4 py-3 bg-surface-soft/50 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-[500] text-sm text-body">Key Arguments</h3>
-                <CopyBtn text={cs.keyArguments.map((a, i) => `${i + 1}. ${a}`).join('\n')} />
+                <CopyBtn text={cs.keyArguments.map((a, i) => `${i + 1}. ${a}`).join('\n')} html={`<ol style="list-style:none;padding:0">${cs.keyArguments.map((a, i) => `<li style="margin-bottom:8px;font-size:14px"><strong>${i + 1}.</strong> ${a}</li>`).join('')}</ol>`} />
               </div>
               <ul className="space-y-1.5">
                 {cs.keyArguments.map((a, i) => (
@@ -394,7 +406,7 @@ export default function CheatSheet() {
             <div className="rounded-xl px-4 py-3 bg-surface-soft/50 mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-[500] text-sm text-body">Bilateral Relations</h3>
-                <CopyBtn text={cs.bilateralRelations} />
+                <CopyBtn text={cs.bilateralRelations} html={`<p style="font-size:14px">${cs.bilateralRelations}</p>`} />
               </div>
               <p className="text-body text-sm whitespace-pre-wrap leading-relaxed">{cs.bilateralRelations}</p>
             </div>
@@ -403,7 +415,7 @@ export default function CheatSheet() {
             <div className="rounded-xl px-4 py-3 bg-surface-soft/50 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-[500] text-sm text-body">Q&amp;A Pairs</h3>
-                <CopyBtn text={cs.qaPairs.map(qa => `Q: ${qa.question}\nA: ${qa.answer}`).join('\n\n')} />
+                <CopyBtn text={cs.qaPairs.map(qa => `Q: ${qa.question}\nA: ${qa.answer}`).join('\n\n')} html={`${cs.qaPairs.map(qa => `<p style="font-size:14px;margin-bottom:8px"><strong>Q:</strong> ${qa.question}</p><p style="font-size:14px;margin-bottom:12px;color:#6c6a64"><strong>A:</strong> ${qa.answer}</p>`).join('')}`} />
               </div>
               <div className="space-y-3">
                 {cs.qaPairs.map((qa, i) => (
@@ -427,7 +439,7 @@ export default function CheatSheet() {
                 <h3 className="font-[500] text-sm text-body flex items-center gap-2">
                   <span>💡</span> Strategy Notes
                 </h3>
-                <CopyBtn text={cs.strategyNotes} />
+                <CopyBtn text={cs.strategyNotes} html={`<p style="font-size:14px">💡 ${cs.strategyNotes}</p>`} />
               </div>
               <p className="text-body text-sm whitespace-pre-wrap leading-relaxed">{cs.strategyNotes}</p>
             </div>
