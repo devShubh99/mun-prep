@@ -139,7 +139,10 @@ export default function ResearchTab() {
 
   // Quickfire data
   const toolkit = sections.find(s => s.title.toLowerCase().includes('toolkit'))
-  const firstDemand = toolkit?.items?.find(i => i.label.toLowerCase().includes('speech') || i.label.toLowerCase().includes('opening'))
+  const firstDemand = conference?.cheat_sheet_data?.coreDemands?.[0]
+    || toolkit?.items?.find(i => i.label.toLowerCase().includes('demand'))
+    || toolkit?.items?.find(i => i.list?.length)
+    || toolkit?.items?.[0]
   const firstRedLine = toolkit?.items?.find(i => i.label.toLowerCase().includes('red'))
   const firstAlly = allyBubbles?.find(b => b.group === 'ally')
 
@@ -209,12 +212,12 @@ export default function ResearchTab() {
               <ConfidenceBar confidence={section.confidence} />
 
               {/* Section header */}
-              <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+              <div className="px-6 pt-5 pb-3 flex items-center gap-2 border-b border-hairline/30">
                 <SectionIcon title={section.title} />
                 <h2 className="text-sm font-[500] text-ink flex-1">{section.title}</h2>
                 {section.confidence && (
-                  <span className={`text-[10px] font-[500] px-1.5 py-0.5 rounded ${section.confidence === 'high' ? 'bg-success/10 text-success' : section.confidence === 'medium' ? 'bg-accent-amber/10 text-accent-amber' : 'bg-error/10 text-error'}`}>
-                    {section.confidence === 'high' ? 'Well sourced' : section.confidence === 'medium' ? 'Partially' : 'Inferred'}
+                  <span className={`text-[11px] font-[500] px-2 py-0.5 rounded ${section.confidence === 'high' ? 'bg-success/10 text-success' : section.confidence === 'medium' ? 'bg-accent-amber/10 text-accent-amber' : 'bg-error/10 text-error'}`}>
+                    {section.confidence === 'high' ? 'Well sourced' : section.confidence === 'medium' ? 'Partially sourced' : 'Inferred'}
                   </span>
                 )}
                 <CopyBtn text={section.items.map(i => `${i.label}: ${i.content}${i.list?.length ? '\n' + i.list.map(l => `- ${l}`).join('\n') : ''}`).join('\n\n')} className="p-1" />
@@ -222,7 +225,7 @@ export default function ResearchTab() {
 
               {/* Bloc layout */}
               {isBloc && (
-                <div className="px-5 pb-5 space-y-4">
+                <div className="px-6 pb-6 space-y-5">
                   {allyBubbles.length > 0 && (
                     <>
                       <div className="flex flex-wrap gap-2">
@@ -266,7 +269,7 @@ export default function ResearchTab() {
 
               {/* Toolkit layout */}
               {isToolkit && (
-                <div className="px-5 pb-5">
+                <div className="px-6 pb-6 space-y-4">
                   {section.items.map((item, ii) => {
                     const isRedLine = item.label.toLowerCase().includes('red')
                     const isOpening = item.label.toLowerCase().includes('opening') || item.label.toLowerCase().includes('speech')
@@ -313,19 +316,19 @@ export default function ResearchTab() {
 
               {/* Standard layout */}
               {!isBloc && !isToolkit && (
-                <div className="px-5 pb-5 space-y-3">
+                <div className="px-6 pb-6 space-y-4 divide-y divide-hairline/20">
                   {section.items.map((item, ii) => (
-                    <div key={ii}>
-                      <span className="text-[10px] font-[500] text-muted uppercase tracking-wide">{item.label}</span>
-                      <p className="text-sm text-body mt-0.5 whitespace-pre-wrap">{item.content}</p>
+                    <div key={ii} className="pt-3 first:pt-0">
+                      <span className="text-[11px] font-[500] text-muted uppercase tracking-wide">{item.label}</span>
+                      <p className="text-sm text-body mt-1 whitespace-pre-wrap leading-relaxed">{item.content}</p>
                       {item.list?.length ? (
-                        <div className="flex flex-wrap gap-1.5 mt-1.5">{item.list.map((l, li) => <span key={li} className="text-xs bg-surface-soft text-muted rounded-full px-2 py-0.5">{l}</span>)}</div>
+                        <div className="flex flex-wrap gap-1.5 mt-2">{item.list.map((l, li) => <span key={li} className="text-xs bg-surface-soft text-muted rounded-full px-2.5 py-0.5">{l}</span>)}</div>
                       ) : null}
                     </div>
                   ))}
                   {/* Voting Record — show inside Committee section or as standalone */}
                   {t.includes('committee') && votingRecord.length > 0 && (
-                    <div className="pt-3 border-t border-hairline">
+                    <div className="pt-4 border-t border-hairline">
                       <span className="text-[10px] font-[500] text-muted uppercase tracking-wide mb-2 block">Voting Record</span>
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
@@ -350,27 +353,25 @@ export default function ResearchTab() {
       </div>
 
       {/* Zone 4: Quickfire Strip */}
-      <div className="sticky bottom-0 z-40 bg-white border-t border-hairline mt-8 no-print">
-        <div className="flex">
-          <div className="flex-1 px-4 py-3">
-            <div className="flex items-center gap-1.5 mb-1"><MessageCircle className="w-3 h-3 text-primary" /><span className="text-[10px] font-[500] text-muted-soft">#1 DEMAND</span></div>
-            <p className="text-xs text-body leading-tight">{firstDemand?.list?.[0] || firstDemand?.content?.slice(0, 60) || 'Generate research'}</p>
+      <div className="sticky bottom-0 z-40 bg-white border-t border-hairline mt-8 no-print shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+        <div className="flex divide-x divide-hairline">
+          <div className="flex-1 px-5 py-4">
+            <div className="flex items-center gap-1.5 mb-1.5"><MessageCircle className="w-3.5 h-3.5 text-primary" /><span className="text-[11px] font-[500] text-muted-soft">#1 DEMAND</span></div>
+            <p className="text-sm text-body leading-snug">{typeof firstDemand === 'string' ? firstDemand : firstDemand?.list?.[0] || firstDemand?.content?.slice(0, 100) || 'Generate research'}</p>
           </div>
-          <div className="w-px bg-hairline" />
-          <div className="flex-1 px-4 py-3">
-            <div className="flex items-center gap-1.5 mb-1"><Ban className="w-3 h-3 text-error" /><span className="text-[10px] font-[500] text-muted-soft">#1 RED LINE</span></div>
-            <p className="text-xs text-body leading-tight">{firstRedLine?.list?.[0] || firstRedLine?.content?.slice(0, 60) || 'N/A'}</p>
+          <div className="flex-1 px-5 py-4">
+            <div className="flex items-center gap-1.5 mb-1.5"><Ban className="w-3.5 h-3.5 text-error" /><span className="text-[11px] font-[500] text-muted-soft">#1 RED LINE</span></div>
+            <p className="text-sm text-body leading-snug">{firstRedLine?.list?.[0] || firstRedLine?.content?.slice(0, 100) || 'N/A'}</p>
           </div>
-          <div className="w-px bg-hairline" />
-          <div className="flex-1 px-4 py-3">
-            <div className="flex items-center gap-1.5 mb-1"><Handshake className="w-3 h-3 text-success" /><span className="text-[10px] font-[500] text-muted-soft">CLOSEST ALLY</span></div>
-            <div className="flex items-center gap-1.5 text-xs text-body">{firstAlly ? <><span>{countryFlag(firstAlly.name)}</span><span>{firstAlly.name}</span></> : <span>N/A</span>}</div>
+          <div className="flex-1 px-5 py-4">
+            <div className="flex items-center gap-1.5 mb-1.5"><Handshake className="w-3.5 h-3.5 text-success" /><span className="text-[11px] font-[500] text-muted-soft">CLOSEST ALLY</span></div>
+            <div className="flex items-center gap-1.5 text-sm text-body whitespace-nowrap">{firstAlly ? <><span>{countryFlag(firstAlly.name)}</span><span>{firstAlly.name}</span></> : <span>N/A</span>}</div>
           </div>
         </div>
       </div>
 
       {/* Zone 5: Floating Chat FAB */}
-      <div className="fixed bottom-28 right-6 z-50 no-print">
+      <div className="fixed bottom-36 right-6 z-50 no-print">
         {chatOpen ? (
           <div className="bg-white border border-hairline rounded-xl shadow-lg w-[360px] max-w-[90vw] h-[480px] max-h-[70vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
@@ -380,7 +381,11 @@ export default function ResearchTab() {
             <div className="flex-1 overflow-hidden"><ResearchChat /></div>
           </div>
         ) : (
-          <button onClick={() => setChatOpen(true)} className="w-12 h-12 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center hover:bg-primary-active transition-colors">
+          <button
+            onClick={() => setChatOpen(true)}
+            className="w-12 h-12 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center hover:bg-primary-active transition-colors ring-2 ring-primary/30 ring-offset-2 ring-offset-transparent"
+            title="Ask follow-up questions"
+          >
             <MessageSquare className="w-5 h-5" />
           </button>
         )}
