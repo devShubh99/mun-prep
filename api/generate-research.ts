@@ -17,7 +17,6 @@ Generate JSON matching this schema exactly:
   "sections": [
     {
       "title": "Country Profile",
-      "confidence": "high|medium|low",
       "items": [
         { "label": "Government Structure", "content": "...", "list": [] },
         { "label": "Key Economic Indicators", "content": "...", "list": [] }
@@ -36,12 +35,12 @@ Generate JSON matching this schema exactly:
 }
 
 Research these 6 sections (fill sections[]):
-1. "Country Profile" — government, economy, demographics, recent news. confidence: high
-2. "Foreign Policy & Alliances" — doctrine, bilaterals, major powers, UN stance. confidence: high
-3. "Committee-Specific Research" — position, votes, domestic relevance, key arguments. confidence: medium
-4. "Historical Context" — UN history, conflicts, treaties. confidence: medium
-5. "Bloc Alignment" — allies, opponents, swing states. confidence: medium. Also populate allyBubbles with 8-12 countries.
-6. "Delegate Toolkit" — speech points (as list), amendments (as list), red lines (as list), working paper allies (as list). confidence: low
+1. "Country Profile" — government, economy, demographics, recent news
+2. "Foreign Policy & Alliances" — doctrine, bilaterals, major powers, UN stance
+3. "Committee-Specific Research" — position, votes, domestic relevance, key arguments
+4. "Historical Context" — UN history, conflicts, treaties
+5. "Bloc Alignment" — allies, opponents, swing states. Also populate allyBubbles with 8-12 countries
+6. "Delegate Toolkit" — speech points (as list), amendments (as list), red lines (as list), working paper allies (as list)
 
 Populate statChips with real data.
 Populate votingRecord with 4-5 realistic past resolutions.

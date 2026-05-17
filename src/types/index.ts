@@ -39,7 +39,6 @@ export interface ResearchItem {
 export interface ResearchSection {
   title: string
   items: ResearchItem[]
-  confidence?: 'high' | 'medium' | 'low'
 }
 
 export interface StatChip {

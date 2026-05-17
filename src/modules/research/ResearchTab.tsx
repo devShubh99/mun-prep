@@ -35,13 +35,6 @@ function SectionIcon({ title }: { title: string }) {
   return <ChevronRight className="w-4 h-4 text-muted" />
 }
 
-function ConfidenceBar({ confidence }: { confidence?: string }) {
-  if (!confidence) return null
-  const colors = { high: 'bg-success', medium: 'bg-accent-amber', low: 'bg-error' }
-  const color = colors[confidence as keyof typeof colors] || 'bg-hairline'
-  return <div className="h-[3px] w-full rounded-t-xl overflow-hidden"><div className={`h-full ${color} rounded-t-xl`} style={{ width: confidence === 'high' ? '100%' : confidence === 'medium' ? '60%' : '30%' }} /></div>
-}
-
 function Bubble({ name, group, importance }: { name: string; group: string; importance: string }) {
   const size = importance === 'large' ? 'px-3 py-1.5 text-sm' : importance === 'medium' ? 'px-2.5 py-1 text-xs' : 'px-2 py-0.5 text-[11px]'
   const colors = { ally: 'bg-success/10 text-success border-success/30', opponent: 'bg-error/10 text-error border-error/30', swing: 'bg-surface-card text-muted border-hairline' }
@@ -208,18 +201,12 @@ export default function ResearchTab() {
           const isToolkit = t.includes('toolkit')
 
           return (
-            <section key={si} ref={(el: HTMLElement | null) => { sectionRefs.current[si] = el }} data-step={si} className="bg-white border border-hairline rounded-xl overflow-hidden">
-              <ConfidenceBar confidence={section.confidence} />
+            <section key={si} ref={(el: HTMLElement | null) => { sectionRefs.current[si] = el }} data-step={si} className="bg-white border border-hairline rounded-xl overflow-hidden border-t-4 border-t-primary/20">
 
               {/* Section header */}
               <div className="px-6 pt-5 pb-3 flex items-center gap-2 border-b border-hairline/30">
                 <SectionIcon title={section.title} />
                 <h2 className="text-sm font-[500] text-ink flex-1">{section.title}</h2>
-                {section.confidence && (
-                  <span className={`text-[11px] font-[500] px-2 py-0.5 rounded ${section.confidence === 'high' ? 'bg-success/10 text-success' : section.confidence === 'medium' ? 'bg-accent-amber/10 text-accent-amber' : 'bg-error/10 text-error'}`}>
-                    {section.confidence === 'high' ? 'Well sourced' : section.confidence === 'medium' ? 'Partially sourced' : 'Inferred'}
-                  </span>
-                )}
                 <CopyBtn text={section.items.map(i => `${i.label}: ${i.content}${i.list?.length ? '\n' + i.list.map(l => `- ${l}`).join('\n') : ''}`).join('\n\n')} className="p-1" />
               </div>
 
