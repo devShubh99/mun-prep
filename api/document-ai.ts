@@ -2,10 +2,8 @@ import { callDeepSeek, send, sendError, readBody } from './_shared.js'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 const ACTIONS: Record<string, string> = {
-  polish: 'Polish the text to make it more diplomatic and professional. Return only the polished text.',
-  shorten: 'Shorten the text to half its length while keeping all key points. Return only the shortened text.',
-  brainstorm: 'Brainstorm additional points, arguments, or clauses the delegate could add. Return only the new content, no prefix.',
-  'insert-clause': 'Draft a formal working clause on this topic. Return only the clause text.',
+  polish: 'You are polishing a MUN delegate\'s document. Rewrite the text to be more diplomatic, professional, and persuasive. Preserve all factual content, arguments, and meaning. Return ONLY the rewritten text — no labels, no explanations, no prefixes. Maintain the same paragraph structure (same number of paragraphs).',
+  brainstorm: 'You are brainstorming additional content for a MUN delegate\'s document. Generate new points, arguments, clauses, or angles the delegate could add. Return ONLY the new content — no labels, no explanations, no prefixes. Each distinct point should be its own paragraph.',
 }
 
 export default async (req: IncomingMessage, res: ServerResponse) => {
@@ -14,7 +12,7 @@ export default async (req: IncomingMessage, res: ServerResponse) => {
     const { action, documentType, content, context } = await readBody(req)
     const instruction = ACTIONS[action] || ACTIONS.polish
     const result = await callDeepSeek([
-      { role: 'system', content: `${instruction}\nDocument type: ${documentType}\n${context ? `Context: ${context}` : ''}` },
+      { role: 'system', content: `${instruction}\nDocument type: ${documentType}${context ? `\nContext: ${context}` : ''}` },
       { role: 'user', content },
     ])
     return send(res, { result: result.trim() })

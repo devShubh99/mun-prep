@@ -15,7 +15,7 @@ import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered,
   Heading1, Heading2, Heading3, Moon, Sun, Check, X,
@@ -93,6 +93,16 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
       try { editor.commands.setContent(JSON.parse(content), false); } catch { editor.commands.setContent(content, false); }
     }
   }, [editor, content, reviewMode]);
+
+  const [wordCount, setWordCount] = useState(0)
+
+  useEffect(() => {
+    if (!editor) return
+    const cb = () => setWordCount(editor.state.doc.textContent.split(/\s+/).filter(Boolean).length)
+    editor.on('update', cb)
+    cb()
+    return () => { editor.off('update', cb) }
+  }, [editor])
 
   if (!editor) return null;
 
@@ -176,6 +186,11 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
       <div className={reviewMode ? 'review-active' : darkMode ? 'editor-dark' : 'editor-light'}>
         <EditorContent editor={editor} className="prose prose-sm max-w-none [&_table]:border [&_table]:border-hairline [&_table_td]:border [&_table_td]:border-hairline [&_table_td]:p-2 [&_table_th]:border [&_table_th]:border-hairline [&_table_th]:p-2 [&_table_th]:bg-surface-soft [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li_label]:mt-1 [&_s]:opacity-60 [&_s]:decoration-error/50" />
       </div>
+      {!reviewMode && (
+        <div className="flex items-center justify-end px-3 py-1.5 border-t border-hairline text-xs text-muted-soft">
+          {wordCount} word{wordCount !== 1 ? 's' : ''}
+        </div>
+      )}
     </div>
   )
 }

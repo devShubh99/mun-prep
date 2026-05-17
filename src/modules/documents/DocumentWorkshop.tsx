@@ -8,23 +8,32 @@ import { Plus, X, Archive, RotateCcw, Trash2 } from 'lucide-react'
 import type { Document } from '../../types'
 import { buildReviewContent, applyChanges } from './suggestion-marks'
 
-function wordCount(content: string): number {
-  try {
-    const json = JSON.parse(content)
-    const text = JSON.stringify(json).replace(/<[^>]*>/g, '').replace(/[{}"\[\]\\]/g, ' ').trim()
-    return text.split(/\s+/).filter(Boolean).length
-  } catch { return 0 }
-}
-
 function extractTextFromDoc(jsonStr: string): string[] {
   try {
     const doc = JSON.parse(jsonStr)
-    if (!doc?.content) return []
+    if (!doc?.content) return jsonStr ? [jsonStr] : []
+    if (!Array.isArray(doc.content)) return []
     return doc.content
       .filter((n: any) => n.type === 'paragraph')
       .map((n: any) => n.content?.map((c: any) => c.text || '').join('') || '')
       .filter((t: string) => t.trim())
-  } catch { return [] }
+  } catch { return jsonStr ? [jsonStr] : [] }
+}
+
+function extractPlainText(content: string): string {
+  try {
+    const doc = JSON.parse(content)
+    if (doc?.type === 'doc' && Array.isArray(doc.content)) {
+      return doc.content
+        .filter((n: any) => n.type === 'paragraph')
+        .map((n: any) => n.content?.map((c: any) => c.text || '').join('') || '')
+        .filter((t: string) => t.trim())
+        .join('\n')
+    }
+    return content
+  } catch {
+    return content
+  }
 }
 
 interface Change {
@@ -72,23 +81,22 @@ export default function DocumentWorkshop() {
   })()
 
   const buildChanges = (originalJson: string, resultText: string, action: string, insertAt?: number): Change[] => {
-    const originals = extractTextFromDoc(originalJson)
-    const results = resultText.split('\n').filter(t => t.trim())
-
-    if (action === 'polish' || action === 'shorten') {
-      const items: Change[] = []
-      const maxLen = Math.max(originals.length, results.length)
-      for (let i = 0; i < maxLen; i++) {
-        const orig = originals[i] || ''
-        const suggested = results[i] || ''
-        if (orig.toLowerCase().trim() === suggested.toLowerCase().trim()) continue
-        if (!orig && !suggested) continue
-        items.push({ id: i, type: 'changed', originalText: orig, newText: suggested, status: 'pending', selectionRange: selectionInfo ? { startPara: selectionInfo.startPara, endPara: selectionInfo.endPara } : null })
-      }
-      return items
+    if (action === 'polish') {
+      const paragraphTexts = extractTextFromDoc(originalJson)
+      const originalFull = paragraphTexts.join('\n').trim()
+      const newFull = resultText.trim()
+      if (!newFull || originalFull.toLowerCase() === newFull.toLowerCase() || !originalFull) return []
+      return [{
+        id: 0,
+        type: 'changed',
+        originalText: originalFull,
+        newText: newFull,
+        status: 'pending',
+        selectionRange: selectionInfo ? { startPara: selectionInfo.startPara, endPara: selectionInfo.endPara } : null,
+      }]
     }
 
-    return [{ id: 0, type: 'added', originalText: '', newText: resultText, status: 'pending', insertAfterIndex: insertAt }]
+    return [{ id: 0, type: 'added', originalText: '', newText: resultText.trim(), status: 'pending', insertAfterIndex: insertAt }]
   }
 
   const getOriginalDoc = () => {
@@ -98,7 +106,7 @@ export default function DocumentWorkshop() {
   const finalizeReview = (updated: Change[]) => {
     if (!activeDocId || !activeDoc) return
     const original = getOriginalDoc()
-    const result = applyChanges(original, updated, selectionInfo)
+    const result = applyChanges(original, updated)
     handleContentChange(JSON.stringify(result))
     setReviewMode(false)
     setChanges([])
@@ -113,7 +121,8 @@ export default function DocumentWorkshop() {
   }
 
   const handleAiResult = (resultText: string, action: string) => {
-    const built = buildChanges(effectiveContent || activeDoc?.content || '{}', resultText, action, cursorPara >= 0 ? cursorPara : undefined)
+    const originalJson = activeDoc?.content || '{}'
+    const built = buildChanges(originalJson, resultText, action, cursorPara >= 0 ? cursorPara : undefined)
     if (built.length === 0) { setError('AI returned no changes.'); return }
     setChanges(built)
     setActiveChangeIdx(0)
@@ -314,7 +323,6 @@ export default function DocumentWorkshop() {
                 className="flex items-center gap-1"
               >
                 {doc.title}
-                {doc.content && <span className="text-xs text-muted-soft font-[400]">({wordCount(doc.content)}w)</span>}
               </span>
             )}
             <button
@@ -362,7 +370,7 @@ export default function DocumentWorkshop() {
       {activeDoc && !reviewMode && (
         <div>
           <AiActionButtons
-            content={effectiveContent}
+            content={extractPlainText(effectiveContent)}
             documentType="general"
             onPreview={handleAiResult}
             disabled={isActionDisabled}

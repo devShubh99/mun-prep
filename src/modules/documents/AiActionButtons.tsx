@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { documentAi } from '../../lib/api'
 import { useConference } from '../../hooks/useConference'
-import { Wand2, Scissors, Lightbulb, FilePlus } from 'lucide-react'
+import { Wand2, Lightbulb } from 'lucide-react'
 import { ProgressBar } from '../../components/ProgressIndicator'
 
 interface Props {
@@ -13,9 +13,7 @@ interface Props {
 
 const ACTIONS = [
   { key: 'polish', label: 'Polish Wording', icon: Wand2 },
-  { key: 'shorten', label: 'Condense', icon: Scissors },
   { key: 'brainstorm', label: 'Brainstorm', icon: Lightbulb },
-  { key: 'insert-clause', label: 'Draft Clause', icon: FilePlus },
 ]
 
 export default function AiActionButtons({ content, documentType, onPreview, disabled }: Props) {
@@ -30,9 +28,7 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
 
   const actionLabels: Record<string, string> = {
     polish: 'Polishing\u2026',
-    shorten: 'Condensing\u2026',
     brainstorm: 'Brainstorming\u2026',
-    'insert-clause': 'Drafting\u2026',
   }
 
   const handleAction = async (action: string) => {
