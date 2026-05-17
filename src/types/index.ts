@@ -53,6 +53,7 @@ export interface DebateQA {
   user_answer: string | null
   evaluation: DebateFeedback | null
   created_at: string
+  archived?: boolean
 }
 
 export interface DebateFeedback {

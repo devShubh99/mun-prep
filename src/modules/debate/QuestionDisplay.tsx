@@ -10,6 +10,7 @@ export default function QuestionDisplay({ question, answer, onAnswerChange, onSu
   return (
     <div className="card-light space-y-4">
       <div className="bg-primary/10 rounded-lg p-4">
+        <span className="text-xs font-[500] text-primary uppercase tracking-wide mb-1 block">Question</span>
         <p className="text-body font-[500]">{question}</p>
       </div>
       <div>
