@@ -18,29 +18,24 @@ import TaskItem from '@tiptap/extension-task-item';
 import { useEffect, useRef, useState } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered,
-  Heading1, Heading2, Heading3, Moon, Sun, Check, X,
+  Heading1, Heading2, Heading3, Moon, Sun,
   Highlighter, Superscript as SuperscriptIcon, Subscript as SubscriptIcon,
   Link2, Table2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
-  CheckSquare, Quote, Minus,
+  CheckSquare, Quote, Minus, X,
 } from 'lucide-react';
 import ToolbarButton from '@/components/ToolbarButton';
 import { SuggestionInsert, SuggestionDelete } from './suggestion-marks';
 
-interface DiffChange {
-  id: number; type: 'changed' | 'added'; originalText: string; newText: string; status: 'pending' | 'accepted' | 'rejected';
-}
 interface SelectionInfo { text: string; startPara: number; endPara: number }
 
 interface Props {
   content: string; onChange: (content: string) => void; darkMode: boolean; setDarkMode: (v: boolean) => void;
-  reviewMode?: boolean; changes?: DiffChange[]; activeChangeIdx?: number;
-  onAcceptChange?: () => void; onRejectChange?: () => void; onAcceptAll?: () => void; onRejectAll?: () => void;
-  onSelectChange?: (changeId: number) => void; onSelection?: (info: SelectionInfo | null) => void; onCursorParagraph?: (idx: number) => void;
+  onSelection?: (info: SelectionInfo | null) => void;
 }
 
 const COLORS = ['#cc785c', '#5db872', '#c64545', '#e8a55a', '#5db8a6', '#141413'];
 
-export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, reviewMode, changes, activeChangeIdx, onAcceptChange, onRejectChange, onAcceptAll, onRejectAll, onSelectChange, onSelection, onCursorParagraph }: Props) {
+export default function RichTextEditor({ content, onChange, darkMode, setDarkMode, onSelection }: Props) {
   const contentRef = useRef(content);
 
   const editor = useEditor({
@@ -55,48 +50,30 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
       SuggestionInsert, SuggestionDelete,
     ],
     content: (() => { try { return JSON.parse(content) } catch { return content } })(),
-    editable: !reviewMode,
     onUpdate: ({ editor }) => {
-      if (reviewMode) return
       const json = JSON.stringify(editor.getJSON());
       contentRef.current = json;
       onChange(json);
     },
     onSelectionUpdate: ({ editor: ed }) => {
-      if (reviewMode && onSelectChange) {
-        let foundId: number | null = null
-        ed.state.doc.nodesBetween(0, ed.state.doc.content.size, (node) => {
-          if (foundId !== null) return false
-          if (!node.marks) return
-          for (const mark of node.marks) {
-            const id = mark.attrs?.changeId
-            if (id !== null && id !== undefined) { foundId = Number(id); return false }
-          }
-        })
-        if (foundId !== null) onSelectChange(foundId)
+      const resolveBlockIdx = (pos: number) => {
+        const r = ed.state.doc.resolve(pos)
+        return r.depth >= 1 ? r.index(1) : 0
       }
-      if (!reviewMode) {
-        const resolveBlockIdx = (pos: number) => {
-          const r = ed.state.doc.resolve(pos)
-          return r.depth >= 1 ? r.index(1) : 0
-        }
-        const cursorIdx = ed.state.selection.empty ? resolveBlockIdx(ed.state.selection.anchor) : -1
-        onCursorParagraph?.(cursorIdx)
-        if (onSelection && !ed.state.selection.empty) {
-          const text = ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to).trim()
-          if (text.length >= 3) onSelection({ text, startPara: resolveBlockIdx(ed.state.selection.from), endPara: resolveBlockIdx(Math.max(ed.state.selection.to - 1, ed.state.selection.from)) })
-          else onSelection(null)
-        } else if (onSelection) onSelection(null)
-      }
+      if (onSelection && !ed.state.selection.empty) {
+        const text = ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to).trim()
+        if (text.length >= 3) onSelection({ text, startPara: resolveBlockIdx(ed.state.selection.from), endPara: resolveBlockIdx(Math.max(ed.state.selection.to - 1, ed.state.selection.from)) })
+        else onSelection(null)
+      } else if (onSelection) onSelection(null)
     },
   });
 
   useEffect(() => {
-    if (editor && content !== contentRef.current && !reviewMode) {
+    if (editor && content !== contentRef.current) {
       contentRef.current = content;
       try { editor.commands.setContent(JSON.parse(content), false); } catch { editor.commands.setContent(content, false); }
     }
-  }, [editor, content, reviewMode]);
+  }, [editor, content]);
 
   const [wordCount, setWordCount] = useState(0)
 
@@ -109,10 +86,6 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
   }, [editor])
 
   if (!editor) return null;
-
-  const pending = changes?.filter(c => c.status === 'pending').length || 0
-  const accepted = changes?.filter(c => c.status === 'accepted').length || 0
-  const rejected = changes?.filter(c => c.status === 'rejected').length || 0
 
   const addImage = () => { const url = window.prompt('Image URL:'); if (url) editor.chain().focus().setImage({ src: url }).run() }
   const addTable = () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
@@ -170,31 +143,12 @@ export default function RichTextEditor({ content, onChange, darkMode, setDarkMod
         <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule"><Minus className="w-4 h-4" /></Btn>
       </div>
 
-      {reviewMode && changes && changes.length > 0 && (
-        <div className="bg-accent-amber/10 border-b border-accent-amber/20 px-4 py-2 flex items-center justify-between text-sm flex-wrap gap-2">
-          <span className="text-muted">Reviewing {changes.length} change{changes.length > 1 ? 's' : ''} <span className="text-muted-soft ml-1">({pending} pending, {accepted} accepted, {rejected} rejected)</span></span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted">{activeChangeIdx !== undefined ? `Paragraph ${activeChangeIdx + 1} of ${changes.length}` : 'Click a change to select it'}</span>
-            <span className="w-px h-4 bg-hairline mx-1" />
-            {activeChangeIdx !== undefined && changes[activeChangeIdx]?.status === 'pending' && (
-              <><button onClick={onRejectChange} className="btn-ghost text-xs text-error flex items-center gap-1"><X className="w-3 h-3" /> Reject</button>
-                <button onClick={onAcceptChange} className="btn-ghost text-xs text-success flex items-center gap-1"><Check className="w-3 h-3" /> Accept</button></>
-            )}
-            {pending > 1 && <><span className="w-px h-4 bg-hairline mx-1" />
-              <button onClick={onRejectAll} className="btn-ghost text-xs text-error">Reject All Pending</button>
-              <button onClick={onAcceptAll} className="btn-ghost text-xs text-success">Accept All Pending</button></>}
-          </div>
-        </div>
-      )}
-
-      <div className={reviewMode ? 'review-active' : darkMode ? 'editor-dark' : 'editor-light'}>
+      <div className={darkMode ? 'editor-dark' : 'editor-light'}>
         <EditorContent editor={editor} className="prose prose-sm max-w-none [&_table]:border [&_table]:border-hairline [&_table_td]:border [&_table_td]:border-hairline [&_table_td]:p-2 [&_table_th]:border [&_table_th]:border-hairline [&_table_th]:p-2 [&_table_th]:bg-surface-soft [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li_label]:mt-1 [&_s]:opacity-60 [&_s]:decoration-error/50" />
       </div>
-      {!reviewMode && (
-        <div className="flex items-center justify-end px-3 py-1.5 border-t border-hairline text-xs text-muted-soft">
-          {wordCount} word{wordCount !== 1 ? 's' : ''}
-        </div>
-      )}
+      <div className="flex items-center justify-end px-3 py-1.5 border-t border-hairline text-xs text-muted-soft">
+        {wordCount} word{wordCount !== 1 ? 's' : ''}
+      </div>
     </div>
   )
 }

@@ -6,7 +6,7 @@ import RichTextEditor from './RichTextEditor'
 import AiActionButtons from './AiActionButtons'
 import { Plus, X, Archive, RotateCcw, Trash2 } from 'lucide-react'
 import type { Document } from '../../types'
-import { buildReviewContent, applyChanges } from './suggestion-marks'
+import { applyAiContent } from './suggestion-marks'
 
 function extractPlainText(content: string): string {
   try {
@@ -24,16 +24,6 @@ function extractPlainText(content: string): string {
   }
 }
 
-interface Change {
-  id: number
-  type: 'changed' | 'added'
-  originalText: string
-  newText: string
-  status: 'pending' | 'accepted' | 'rejected'
-  insertAfterIndex?: number
-  selectionRange?: { startPara: number; endPara: number } | null
-}
-
 interface SelectionInfo { text: string; startPara: number; endPara: number }
 
 export default function DocumentWorkshop() {
@@ -46,12 +36,7 @@ export default function DocumentWorkshop() {
   const [renameValue, setRenameValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [darkMode, setDarkMode] = useState(false)
-  const [changes, setChanges] = useState<Change[]>([])
-  const [reviewMode, setReviewMode] = useState(false)
-  const [reviewContent, setReviewContent] = useState<string | null>(null)
-  const [activeChangeIdx, setActiveChangeIdx] = useState(0)
   const [selectionInfo, setSelectionInfo] = useState<SelectionInfo | null>(null)
-  const [cursorPara, setCursorPara] = useState(-1)
 
   const activeDoc = docs.find(d => d.id === activeDocId)
 
@@ -59,111 +44,24 @@ export default function DocumentWorkshop() {
 
   const isActionDisabled = !selectionInfo || selectionInfo.text.trim().length < 3
 
-  const buildChanges = (originalJson: string, rawText: string, action: string, _insertAt?: number): Change[] => {
-    const resultText = rawText.replace(/\*+/g, '').trim()
-    if (action === 'polish') {
-      if (!selectionInfo) return []
-      let originalFull = ''
-      try {
-        const fullDoc = JSON.parse(originalJson)
-        const nodes = Array.isArray(fullDoc?.content)
-          ? fullDoc.content.slice(selectionInfo.startPara, selectionInfo.endPara + 1)
-          : []
-        originalFull = nodes
-          .map((n: any) => n.content?.map((c: any) => c.text || '').join('') || '')
-          .filter((t: string) => t.trim())
-          .join('\n')
-          .trim()
-      } catch { return [] }
-      const newFull = resultText.trim()
-      if (!newFull || originalFull.toLowerCase() === newFull.toLowerCase() || !originalFull) return []
-      return [{
-        id: 0,
-        type: 'changed',
-        originalText: originalFull,
-        newText: newFull,
-        status: 'pending',
-        selectionRange: { startPara: selectionInfo.startPara, endPara: selectionInfo.endPara },
-      }]
-    }
-
-    const insertAfterIdx = selectionInfo ? selectionInfo.endPara : undefined
-    return [{ id: 0, type: 'added', originalText: '', newText: resultText.trim(), status: 'pending', insertAfterIndex: insertAfterIdx }]
-  }
-
   const getOriginalDoc = () => {
     try { return JSON.parse(activeDoc?.content || '{}') } catch { return { type: 'doc', content: [] } }
   }
 
-  const finalizeReview = (updated: Change[]) => {
-    if (!activeDocId || !activeDoc) return
+  const applyResult = (rawText: string, action: string) => {
+    const text = rawText.replace(/\*+/g, '').trim()
+    if (!text) { setError('AI returned empty response'); return }
     const original = getOriginalDoc()
-    const result = applyChanges(original, updated)
+    const result = applyAiContent(original, text, selectionInfo, action === 'brainstorm')
     handleContentChange(JSON.stringify(result))
-    setReviewMode(false)
-    setChanges([])
-    setReviewContent(null)
     setSelectionInfo(null)
   }
 
-  const tryFinishReview = (updated: Change[]) => {
-    if (!updated.some(c => c.status === 'pending')) {
-      finalizeReview(updated)
-    }
-  }
-
-  const handleAiResult = (resultText: string, action: string) => {
-    const originalJson = activeDoc?.content || '{}'
-    const built = buildChanges(originalJson, resultText, action, cursorPara >= 0 ? cursorPara : undefined)
-    if (built.length === 0) { setError('AI returned no changes.'); return }
-    setChanges(built)
-    setActiveChangeIdx(0)
-    setReviewMode(true)
-    const original = getOriginalDoc()
-    const reviewDoc = buildReviewContent(original, built)
-    setReviewContent(JSON.stringify(reviewDoc))
-  }
-
-  const updateChangeStatus = (id: number, status: 'accepted' | 'rejected') => {
-    setChanges(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, status } : c)
-      const original = getOriginalDoc()
-      const reviewDoc = buildReviewContent(original, updated)
-      setReviewContent(JSON.stringify(reviewDoc))
-      tryFinishReview(updated)
-      return updated
-    })
-  }
-
-  const acceptAll = () => {
-    setChanges(prev => {
-      const updated = prev.map(c => c.status === 'pending' ? { ...c, status: 'accepted' as const } : c)
-      const original = getOriginalDoc()
-      setReviewContent(JSON.stringify(buildReviewContent(original, updated)))
-      tryFinishReview(updated)
-      return updated
-    })
-  }
-
-  const rejectAll = () => {
-    setChanges(prev => {
-      const updated = prev.map(c => c.status === 'pending' ? { ...c, status: 'rejected' as const } : c)
-      const original = getOriginalDoc()
-      setReviewContent(JSON.stringify(buildReviewContent(original, updated)))
-      tryFinishReview(updated)
-      return updated
-    })
-  }
-
-  const handleSelectChange = (id: number) => {
-    setActiveChangeIdx(id)
-  }
-
   const saveDocument = useCallback(async () => {
-    if (!activeDoc || reviewMode) return
+    if (!activeDoc) return
     const { error: err } = await supabase.from('documents').update({ content: activeDoc.content, updated_at: new Date().toISOString() }).eq('id', activeDoc.id)
     if (err) setError(err.message)
-  }, [activeDoc, reviewMode])
+  }, [activeDoc])
 
   useAutoSave(activeDoc?.content, saveDocument)
 
@@ -300,7 +198,7 @@ export default function DocumentWorkshop() {
                 ? 'border-primary text-ink'
                 : 'border-transparent text-muted hover:text-body'
             }`}
-            onClick={() => { if (!reviewMode) setActiveDocId(doc.id) }}
+            onClick={() => setActiveDocId(doc.id)}
           >
             {renamingId === doc.id ? (
               <input
@@ -329,7 +227,7 @@ export default function DocumentWorkshop() {
             </button>
           </div>
         ))}
-        <button onClick={handleCreate} disabled={reviewMode} className="p-3 text-muted hover:text-ink">
+        <button onClick={handleCreate} className="p-3 text-muted hover:text-ink">
           <Plus className="w-4 h-4" />
         </button>
         <div className="ml-auto flex items-center gap-2">
@@ -363,12 +261,12 @@ export default function DocumentWorkshop() {
         </div>
       )}
 
-      {activeDoc && !reviewMode && (
+      {activeDoc && (
         <div>
           <AiActionButtons
             content={extractPlainText(effectiveContent)}
             documentType="general"
-            onPreview={handleAiResult}
+            onApply={applyResult}
             disabled={isActionDisabled}
           />
           <div className="mt-4">
@@ -378,28 +276,8 @@ export default function DocumentWorkshop() {
               darkMode={darkMode}
               setDarkMode={setDarkMode}
               onSelection={setSelectionInfo}
-              onCursorParagraph={setCursorPara}
             />
           </div>
-        </div>
-      )}
-
-      {activeDoc && reviewMode && reviewContent && (
-        <div>
-          <RichTextEditor
-            content={reviewContent}
-            onChange={() => {}}
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
-            reviewMode={reviewMode}
-            changes={changes}
-            activeChangeIdx={activeChangeIdx}
-            onAcceptChange={() => updateChangeStatus(activeChangeIdx, 'accepted')}
-            onRejectChange={() => updateChangeStatus(activeChangeIdx, 'rejected')}
-            onAcceptAll={acceptAll}
-            onRejectAll={rejectAll}
-            onSelectChange={handleSelectChange}
-          />
         </div>
       )}
 

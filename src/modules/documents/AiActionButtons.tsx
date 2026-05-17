@@ -7,7 +7,7 @@ import { ProgressBar } from '../../components/ProgressIndicator'
 interface Props {
   content: string
   documentType: string
-  onPreview: (result: string, action: string) => void
+  onApply: (result: string, action: string) => void
   disabled?: boolean
 }
 
@@ -16,7 +16,7 @@ const ACTIONS = [
   { key: 'brainstorm', label: 'Brainstorm', icon: Lightbulb },
 ]
 
-export default function AiActionButtons({ content, documentType, onPreview, disabled }: Props) {
+export default function AiActionButtons({ content, documentType, onApply, disabled }: Props) {
   const { tasks, setTask, setDocumentDraft } = useConference()
   const abortRef = useRef<AbortController | null>(null)
 
@@ -27,6 +27,7 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
   useEffect(() => {
     abortRef.current?.abort()
   }, [content])
+
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,7 +47,7 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
       const { result } = await documentAi({ action, documentType, content }, controller.signal)
       if (!result) throw new Error('AI returned empty response')
       setDocumentDraft({ content: result, action })
-      onPreview(result, action)
+      onApply(result, action)
     } catch (e: any) {
       if (e?.name === 'AbortError') return
       setError(e?.message || 'Action failed')
