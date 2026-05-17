@@ -26,6 +26,7 @@ export default function AiActionButtons({ content, documentType, onPreview, disa
     setError(null)
     try {
       const { result } = await documentAi({ action, documentType, content })
+      if (!result) throw new Error('AI returned empty response')
       onPreview(result, action)
     } catch (e: any) {
       setError(e?.message || 'Action failed')

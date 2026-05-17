@@ -200,11 +200,19 @@ export default function DocumentWorkshop() {
   const handleCreate = async () => {
     if (!conference) return
     setError(null)
+    const baseTitle = 'Untitled'
+    const existingNames = new Set(docs.map(d => d.title))
+    let uniqueTitle = baseTitle
+    let counter = 1
+    while (existingNames.has(uniqueTitle)) {
+      counter++
+      uniqueTitle = `${baseTitle} (${counter})`
+    }
     const { data, error: err } = await supabase
       .from('documents')
       .insert({
         conference_id: conference.id,
-        title: 'Untitled',
+        title: uniqueTitle,
         content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
         archived: false,
       })
@@ -254,9 +262,17 @@ export default function DocumentWorkshop() {
 
   const handleRename = async (id: string, title: string) => {
     setError(null)
-    const { error: err } = await supabase.from('documents').update({ title }).eq('id', id)
+    const safeTitle = title.trim() || 'Untitled'
+    const existingNames = new Set(docs.filter(d => d.id !== id).map(d => d.title))
+    let finalTitle = safeTitle
+    let counter = 1
+    while (existingNames.has(finalTitle)) {
+      counter++
+      finalTitle = `${safeTitle} (${counter})`
+    }
+    const { error: err } = await supabase.from('documents').update({ title: finalTitle }).eq('id', id)
     if (err) { setError(err.message); return }
-    setDocs(prev => prev.map(d => d.id === id ? { ...d, title } : d))
+    setDocs(prev => prev.map(d => d.id === id ? { ...d, title: finalTitle } : d))
     setRenamingId(null)
   }
 

@@ -27,6 +27,10 @@ export async function callDeepSeek(messages: { role: string; content: string }[]
   }
 
   const data = await res.json()
+  if (!data?.choices?.[0]?.message?.content) {
+    const preview = JSON.stringify(data).slice(0, 120)
+    throw new Error(`API returned unexpected response: ${preview}`)
+  }
   return data.choices[0].message.content
 }
 

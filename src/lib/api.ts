@@ -15,11 +15,11 @@ async function request<T>(path: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new ApiError(text || res.statusText, res.status)
+  const text = await res.text()
+  if (!res.ok) throw new ApiError(text || res.statusText, res.status)
+  try { return JSON.parse(text) } catch {
+    throw new ApiError(`Invalid response: ${text.slice(0, 80)}`)
   }
-  return res.json()
 }
 
 export function generateCheatSheet(params: {
