@@ -5,7 +5,7 @@ import { useAutoSave } from '../../hooks/useAutoSave'
 import RichTextEditor from './RichTextEditor'
 import AiActionButtons from './AiActionButtons'
 // TEST BUILD: Document archive — restore + permanent delete with confirmation
-import { Plus, X, Archive, RotateCcw, Trash2 } from 'lucide-react'
+import { Plus, X, Archive, RotateCcw, Trash2, Check, XCircle } from 'lucide-react'
 import type { Document } from '../../types'
 
 function wordCount(content: string): number {
@@ -25,8 +25,27 @@ export default function DocumentWorkshop() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [darkMode, setDarkMode] = useState(false)
+  const [preview, setPreview] = useState<{ content: string; action: string } | null>(null)
 
   const activeDoc = docs.find(d => d.id === activeDocId)
+
+  const handleApprovePreview = () => {
+    if (!preview || !activeDocId) return
+    if (preview.action === 'polish' || preview.action === 'shorten') {
+      handleContentChange(preview.content)
+    } else {
+      try {
+        const parsed = JSON.parse(activeDoc?.content || '{}')
+        parsed.content.push({
+          type: 'paragraph',
+          content: [{ type: 'text', text: '\n' + preview.content }],
+        })
+        handleContentChange(JSON.stringify(parsed))
+      } catch { handleContentChange(preview.content) }
+    }
+    setPreview(null)
+  }
 
   useEffect(() => {
     if (!conference) return
@@ -84,6 +103,8 @@ export default function DocumentWorkshop() {
     if (data) {
       setDocs(prev => [...prev, data as Document])
       setActiveDocId(data.id)
+      setRenamingId(data.id)
+      setRenameValue('')
     }
   }
 
@@ -216,18 +237,44 @@ export default function DocumentWorkshop() {
           <AiActionButtons
             content={activeDoc.content}
             documentType="general"
-            onResult={handleContentChange}
+            onPreview={(content, action) => setPreview({ content, action })}
           />
           <div className="mt-4">
             <RichTextEditor
               content={activeDoc.content}
               onChange={handleContentChange}
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
             />
           </div>
         </div>
       ) : (
         <div className="card text-center">
           <p className="text-muted">No documents yet. Click <strong>+</strong> to create one.</p>
+        </div>
+      )}
+
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setPreview(null)}>
+          <div className="bg-canvas rounded-xl border border-hairline p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="font-[500] text-sm text-body mb-1 capitalize">{preview.action} Result</h3>
+            <p className="text-xs text-muted-soft mb-4">
+              {preview.action === 'brainstorm' || preview.action === 'insert-clause'
+                ? 'This content will be appended at the end of your document.'
+                : 'This content will replace the current document text.'}
+            </p>
+            <div className="bg-white rounded-lg border border-hairline p-4 text-sm text-body whitespace-pre-wrap mb-4 max-h-60 overflow-y-auto">
+              {preview.content}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setPreview(null)} className="btn-secondary flex items-center gap-1">
+                <XCircle className="w-4 h-4" /> Deny
+              </button>
+              <button onClick={handleApprovePreview} className="btn-primary flex items-center gap-1">
+                <Check className="w-4 h-4" /> Approve
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

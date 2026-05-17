@@ -6,7 +6,7 @@ import { ProgressBar } from '../../components/ProgressIndicator'
 interface Props {
   content: string
   documentType: string
-  onResult: (result: string) => void
+  onPreview: (result: string, action: string) => void
 }
 
 const ACTIONS = [
@@ -16,7 +16,7 @@ const ACTIONS = [
   { key: 'insert-clause', label: 'Insert Clause', icon: FilePlus },
 ]
 
-export default function AiActionButtons({ content, documentType, onResult }: Props) {
+export default function AiActionButtons({ content, documentType, onPreview }: Props) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,20 +25,7 @@ export default function AiActionButtons({ content, documentType, onResult }: Pro
     setError(null)
     try {
       const { result } = await documentAi({ action, documentType, content })
-      if (action === 'polish' || action === 'shorten') {
-        onResult(result)
-      } else {
-        try {
-          const parsed = JSON.parse(content)
-          parsed.content.push({
-            type: 'paragraph',
-            content: [{ type: 'text', text: '\n' + result }],
-          })
-          onResult(JSON.stringify(parsed))
-        } catch {
-          onResult(result)
-        }
-      }
+      onPreview(result, action)
     } catch (e: any) {
       setError(e?.message || 'Action failed')
     } finally {
